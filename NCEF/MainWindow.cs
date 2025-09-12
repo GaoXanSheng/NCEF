@@ -39,10 +39,8 @@ public class MainWindow
   {
     CefSettings settings = new CefSettings();
     // 设定 CEF 缓存和资源目录
-    string gameDir = Path.Combine(Environment.CurrentDirectory, "cef_data");
-    settings.CachePath = Path.Combine(gameDir, "cache"); // 浏览器缓存
-    settings.ResourcesDirPath = Path.Combine(gameDir, "resources"); // CEF 自带的资源文件
-    settings.LocalesDirPath = Path.Combine(gameDir, "locales"); // 本地化
+    string gameDir = Environment.CurrentDirectory;
+    settings.CachePath = Path.Combine(gameDir, "User Data"); // 浏览器缓存
     settings.LogFile = Path.Combine(gameDir, "cef.log");
 
     settings.WindowlessRenderingEnabled = true;
