@@ -54,7 +54,7 @@ namespace NCEF
             settings.WindowlessRenderingEnabled = true;
             settings.EnableAudio();
             settings.CefCommandLineArgs.Add("remote-debugging-port", this.BROWSER_PORT.ToString());
-            if (Cef.IsInitialized == false)
+            if (!Cef.IsInitialized.GetValueOrDefault())
             {
                 Cef.Initialize((CefSettingsBase)settings, true);
             }
