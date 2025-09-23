@@ -54,9 +54,15 @@ namespace NCEF
             settings.WindowlessRenderingEnabled = true;
             settings.EnableAudio();
             settings.CefCommandLineArgs.Add("remote-debugging-port", this.BROWSER_PORT.ToString());
+            
             if (!Cef.IsInitialized.GetValueOrDefault())
             {
-                Cef.Initialize((CefSettingsBase)settings, true);
+                bool initialized = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
+                if (!initialized)
+                {
+                    Console.Error.WriteLine("CefSharp initialization failed! See cef.log for details.");
+                    Environment.Exit(-1); // 初始化失败，直接退出进程
+                }
             }
             this._browser = new ChromiumWebBrowser(CUSTOMIZE_LOADING_SCREEN_URL, (IBrowserSettings)new BrowserSettings()
             {
