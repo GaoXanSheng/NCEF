@@ -54,7 +54,10 @@ namespace NCEF
             settings.WindowlessRenderingEnabled = true;
             settings.EnableAudio();
             settings.CefCommandLineArgs.Add("remote-debugging-port", this.BROWSER_PORT.ToString());
-            Cef.Initialize((CefSettingsBase)settings, true);
+            if (Cef.IsInitialized == false)
+            {
+                Cef.Initialize((CefSettingsBase)settings, true);
+            }
             this._browser = new ChromiumWebBrowser(CUSTOMIZE_LOADING_SCREEN_URL, (IBrowserSettings)new BrowserSettings()
             {
                 WindowlessFrameRate = MAXFPS
