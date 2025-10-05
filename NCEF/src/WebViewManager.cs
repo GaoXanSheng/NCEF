@@ -31,6 +31,8 @@ namespace NCEF
                 WindowlessRenderingEnabled = true
             };
             settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
+            settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
+            settings.CefCommandLineArgs.Add("enable-media-stream", "1");
             settings.EnableAudio();
 
             if (!Cef.IsInitialized.GetValueOrDefault())
