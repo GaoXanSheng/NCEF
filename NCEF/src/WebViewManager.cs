@@ -27,10 +27,10 @@ namespace NCEF
         private string GetUserDataPath()
         {
             string basePath = Path.Combine(Environment.CurrentDirectory, "UserData_"+userIntDataId);
-            string lockFile = Path.Combine(basePath, "LOCK");
+            string lockFile = Path.Combine(basePath, "lockfile");
             if (File.Exists(lockFile))
             {
-                userIntDataId++;
+                userIntDataId=+1;
                 return GetUserDataPath();
             }
 
