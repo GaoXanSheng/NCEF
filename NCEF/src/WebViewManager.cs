@@ -22,11 +22,27 @@ namespace NCEF
             MaxFPS = maxFPS;
         }
 
+        private int userIntDataId = 0;
+
+        private string GetUserDataPath()
+        {
+            string basePath = Path.Combine(Environment.CurrentDirectory, "UserData_"+userIntDataId);
+            string lockFile = Path.Combine(basePath, "LOCK");
+            if (File.Exists(lockFile))
+            {
+                userIntDataId++;
+                return GetUserDataPath();
+            }
+
+            return basePath;
+        }
+
         public async Task InitializeAsync(int debugPort)
         {
             var settings = new CefSettings
             {
-                CachePath = Path.Combine(Environment.CurrentDirectory, "User Data"),
+                CachePath = GetUserDataPath(),
+
                 LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
                 WindowlessRenderingEnabled = true
             };
