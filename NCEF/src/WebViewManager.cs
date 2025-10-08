@@ -43,7 +43,7 @@ namespace NCEF
             {
                 CachePath = GetUserDataPath(),
 
-                LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
+                LogFile = Path.Combine(Environment.CurrentDirectory, "cef_"+userIntDataId+".log"),
                 WindowlessRenderingEnabled = true
             };
             settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
