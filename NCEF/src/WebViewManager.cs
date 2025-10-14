@@ -21,27 +21,12 @@ namespace NCEF
             InitialUrl = url;
             MaxFPS = maxFPS;
         }
-
-        private Tuple<string, string> GetUserDataPath()
-        {
-            string basePath = Path.Combine(Environment.CurrentDirectory, "User Data");
-            string lockFile = Path.Combine(basePath, "lockfile");
-            string LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log");
-            if (File.Exists(lockFile))
-            {
-                return new Tuple<string, string>("", "");
-            }
-
-            return new Tuple<string, string>(basePath, LogFile);
-        }
-
         public async Task InitializeAsync(int debugPort)
         {
-            var path = GetUserDataPath();
             var settings = new CefSettings
             {
-                CachePath = path.Item1,
-                LogFile = path.Item2,
+                CachePath = Path.Combine(Environment.CurrentDirectory, "User Data"),
+                LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
                 WindowlessRenderingEnabled = true
             };
             settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());

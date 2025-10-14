@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace NCEF
@@ -11,41 +10,85 @@ namespace NCEF
         private static MainWindow main;
 
         [STAThread]
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
+            EnsureSingleInstance();
+
             var parent = GetParentProcess();
             if (parent == null || parent.HasExited)
             {
-                Console.WriteLine("TheProgramIsSelfExited");
+                Console.WriteLine("Parent process does not exist. Exiting.");
                 return;
             }
 
             Console.WriteLine($"ParentProcess: {parent.ProcessName} (PID: {parent.Id})");
 
             main = new MainWindow();
-            main.InitAsync().GetAwaiter().GetResult();
+            await main.InitAsync();
 
-            // 父进程监控 (兼容 .NET Framework)
-            Task.Run(() =>
+            // 当父进程退出时关闭程序
+            _ = MonitorParentProcess(parent);
+
+            // 阻止主线程退出
+            await Task.Delay(-1);
+        }
+
+        #region Single Instance
+
+        private static void EnsureSingleInstance()
+        {
+            var currentProcess = Process.GetCurrentProcess();
+            var processes = Process.GetProcessesByName(currentProcess.ProcessName);
+
+            foreach (var process in processes)
             {
-                while (!parent.HasExited)
+                if (process.Id != currentProcess.Id)
                 {
-                    Thread.Sleep(1000); // 每 0.5 秒检查一次
+                    Console.WriteLine($"Found old process (PID: {process.Id}), terminating...");
+                    try
+                    {
+                        process.Kill(); // 递归终止子进程
+                        process.WaitForExit(5000);
+                        Console.WriteLine("Old process terminated.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Error terminating old process: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Parent Process Monitoring
+
+        private static Task MonitorParentProcess(Process parent)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    parent.WaitForExit(); // 同步阻塞，但在独立线程中
+                }
+                catch
+                {
+                    // 忽略异常
                 }
 
-                Console.WriteLine("TheProgramIsSelfExited");
+                Console.WriteLine("Parent process exited. Closing program.");
                 main.OnClosed(EventArgs.Empty);
                 Environment.Exit(0);
             });
-
-            // 阻止主线程退出
-            Thread.Sleep(Timeout.Infinite);
         }
+
+
+        #endregion
 
         #region Parent Process Helper
 
         [StructLayout(LayoutKind.Sequential)]
-        struct PROCESS_BASIC_INFORMATION
+        private struct PROCESS_BASIC_INFORMATION
         {
             public IntPtr Reserved1;
             public IntPtr PebBaseAddress;
@@ -56,8 +99,12 @@ namespace NCEF
         }
 
         [DllImport("ntdll.dll")]
-        private static extern int NtQueryInformationProcess(IntPtr processHandle, int processInformationClass,
-            ref PROCESS_BASIC_INFORMATION processInformation, uint processInformationLength, out uint returnLength);
+        private static extern int NtQueryInformationProcess(
+            IntPtr processHandle,
+            int processInformationClass,
+            ref PROCESS_BASIC_INFORMATION processInformation,
+            uint processInformationLength,
+            out uint returnLength);
 
         private static Process GetParentProcess()
         {
@@ -65,6 +112,7 @@ namespace NCEF
             uint retLen;
             int status = NtQueryInformationProcess(Process.GetCurrentProcess().Handle, 0, ref pbi,
                 (uint)Marshal.SizeOf(pbi), out retLen);
+
             if (status != 0) return null;
 
             try
