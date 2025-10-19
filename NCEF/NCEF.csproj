@@ -89,10 +89,12 @@
         <Compile Include="SpoutDX.cs" />
         <Compile Include="src\EnvManager.cs" />
         <Compile Include="src\GraphicsManager.cs" />
+        <Compile Include="src\Handler\JsDialogManager.cs" />
         <Compile Include="src\Handler\VolumeAudioHandler.cs" />
         <Compile Include="src\JavascriptRegister\JsAudioController.cs" />
         <Compile Include="src\LifeSpanHandler.cs" />
         <Compile Include="src\MainWindow.cs" />
+        <Compile Include="src\PromptForm.cs" />
         <Compile Include="src\WebViewManager.cs" />
     </ItemGroup>
     <ItemGroup>

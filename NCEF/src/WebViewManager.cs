@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using CefSharp;
+using CefSharp.Handler;
 using CefSharp.OffScreen;
 using NCEF.Handler;
 using NCEF.JavascriptRegister;
@@ -21,6 +22,7 @@ namespace NCEF
             InitialUrl = url;
             MaxFPS = maxFPS;
         }
+
         public async Task InitializeAsync(int debugPort)
         {
             var settings = new CefSettings
@@ -54,7 +56,8 @@ namespace NCEF
             Browser = new ChromiumWebBrowser(InitialUrl, browserSettings)
             {
                 LifeSpanHandler = new LifeSpanHandler(),
-                AudioHandler = new VolumeAudioHandler()
+                AudioHandler = new VolumeAudioHandler(),
+                JsDialogHandler = new JsDialogManager(),
             };
             Browser.FrameLoadEnd += OnFrameLoadEnd;
             Browser.JavascriptObjectRepository.Register(
