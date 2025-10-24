@@ -119,12 +119,5 @@
       <Error Condition="!Exists('..\packages\CefSharp.Common.140.1.140\build\CefSharp.Common.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CefSharp.Common.140.1.140\build\CefSharp.Common.targets'))" />
     </Target>
     <Import Project="..\packages\CefSharp.Common.140.1.140\build\CefSharp.Common.targets" Condition="Exists('..\packages\CefSharp.Common.140.1.140\build\CefSharp.Common.targets')" />
-    <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-         Other similar extension points exist, see Microsoft.Common.targets.
-    <Target Name="BeforeBuild">
-    </Target>
-    <Target Name="AfterBuild">
-    </Target>
-    -->
 
 </Project>

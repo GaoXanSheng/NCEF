@@ -11,9 +11,6 @@ namespace NCEF.Handler
         {
             _volume = initialVolume;
         }
-        /// <summary>
-        /// 设置音量，范围 0.0 ~ 1.0
-        /// </summary>
         public static void SetVolume(double value)
         {
             if (value < 0) value = 0;
@@ -26,7 +23,6 @@ namespace NCEF.Handler
             float[] buffer = new float[noOfFrames];
             System.Runtime.InteropServices.Marshal.Copy(data, buffer, 0, noOfFrames);
 
-            // 调整音量
             for (int i = 0; i < buffer.Length; i++)
             {
                 buffer[i] *= (float)_volume;

@@ -51,7 +51,7 @@ namespace NCEF
             };
             var jsBindingSettings = new CefSharp.JavascriptBinding.JavascriptBindingSettings()
             {
-                LegacyBindingEnabled = true // 必须在浏览器创建前设置
+                LegacyBindingEnabled = true
             };
             Browser = new ChromiumWebBrowser(InitialUrl, browserSettings)
             {
@@ -61,9 +61,9 @@ namespace NCEF
             };
             Browser.FrameLoadEnd += OnFrameLoadEnd;
             Browser.JavascriptObjectRepository.Register(
-                "JsAudioController", // JS 端访问名
-                new JsAudioController(Browser), // C# 对象实例
-                isAsync: false, // JS 调用返回 Promise
+                "JsAudioController",
+                new JsAudioController(Browser),
+                isAsync: false,
                 options: BindingOptions.DefaultBinder
             );
             await Browser.WaitForInitialLoadAsync();

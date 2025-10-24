@@ -26,10 +26,8 @@ namespace NCEF
             main = new MainWindow();
             await main.InitAsync();
 
-            // 当父进程退出时关闭程序
             _ = MonitorParentProcess(parent);
 
-            // 阻止主线程退出
             await Task.Delay(-1);
         }
 
@@ -47,7 +45,7 @@ namespace NCEF
                     Console.WriteLine($"Found old process (PID: {process.Id}), terminating...");
                     try
                     {
-                        process.Kill(); // 递归终止子进程
+                        process.Kill();
                         process.WaitForExit(5000);
                         Console.WriteLine("Old process terminated.");
                     }
@@ -69,11 +67,10 @@ namespace NCEF
             {
                 try
                 {
-                    parent.WaitForExit(); // 同步阻塞，但在独立线程中
+                    parent.WaitForExit();
                 }
                 catch
                 {
-                    // 忽略异常
                 }
 
                 Console.WriteLine("Parent process exited. Closing program.");
