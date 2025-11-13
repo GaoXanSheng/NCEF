@@ -12,7 +12,6 @@ namespace NCEF
         [STAThread]
         public static async Task Main(string[] args)
         {
-            EnsureSingleInstance();
 
             var parent = GetParentProcess();
             if (parent == null || parent.HasExited)
@@ -32,34 +31,7 @@ namespace NCEF
             // 阻止主线程退出
             await Task.Delay(-1);
         }
-
-        #region Single Instance
-
-        private static void EnsureSingleInstance()
-        {
-            var currentProcess = Process.GetCurrentProcess();
-            var processes = Process.GetProcessesByName(currentProcess.ProcessName);
-
-            foreach (var process in processes)
-            {
-                if (process.Id != currentProcess.Id)
-                {
-                    Console.WriteLine($"Found old process (PID: {process.Id}), terminating...");
-                    try
-                    {
-                        process.Kill(); // 递归终止子进程
-                        process.WaitForExit(5000);
-                        Console.WriteLine("Old process terminated.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"Error terminating old process: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        #endregion
+        
 
         #region Parent Process Monitoring
 
