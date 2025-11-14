@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Linq;
 using CefSharp;
 using CefSharp.OffScreen;
 using NCEF.Handler;
@@ -27,14 +25,6 @@ namespace NCEF
         public async Task InitializeAsync(int debugPort)
         {
             string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
-            
-            // Check if User Data folder is locked/occupied BEFORE any CEF initialization
-            if (!Cef.IsInitialized.GetValueOrDefault() && IsDirectoryLocked(userDataPath))
-            {
-                Console.Error.WriteLine("User Data folder is already in use by another NCEF instance!");
-                Environment.Exit(-1);
-                return; // Safety return, though Exit should terminate
-            }
 
             if (!Cef.IsInitialized.GetValueOrDefault())
             {
@@ -80,75 +70,6 @@ namespace NCEF
             await Browser.WaitForInitialLoadAsync();
         }
 
-        private bool IsDirectoryLocked(string directoryPath)
-        {
-            // If directory doesn't exist, it's not locked
-            if (!Directory.Exists(directoryPath))
-            {
-                return false;
-            }
-
-            // First, check for other NCEF or CefSharp processes using the same User Data directory
-            try
-            {
-                var currentProcess = Process.GetCurrentProcess();
-                var cefProcesses = Process.GetProcessesByName("NCEF")
-                    .Concat(Process.GetProcessesByName("CefSharp.BrowserSubprocess"))
-                    .Where(p => p.Id != currentProcess.Id)
-                    .ToList();
-
-                if (cefProcesses.Any())
-                {
-                    Console.WriteLine($"Found {cefProcesses.Count} other CEF/NCEF process(es) running");
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error checking for processes: {ex.Message}");
-            }
-
-            // Check multiple lock files that Chromium/CEF creates
-            string[] lockFiles = new string[]
-            {
-                Path.Combine(directoryPath, "SingletonLock"),
-                Path.Combine(directoryPath, "SingletonSocket"),
-                Path.Combine(directoryPath, "SingletonCookie"),
-                Path.Combine(directoryPath, "Cookies"),
-                Path.Combine(directoryPath, "Cookies-journal"),
-                Path.Combine(directoryPath, "Local State"),
-                Path.Combine(directoryPath, "lockfile")
-            };
-
-            foreach (string lockFilePath in lockFiles)
-            {
-                if (File.Exists(lockFilePath))
-                {
-                    try
-                    {
-                        // Try to open the file with exclusive access
-                        using (FileStream fs = File.Open(lockFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-                        {
-                            // If we can open it exclusively, continue checking other files
-                        }
-                    }
-                    catch (IOException)
-                    {
-                        // File is locked by another process
-                        Console.WriteLine($"Detected locked file: {Path.GetFileName(lockFilePath)}");
-                        return true;
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        // File is locked or we don't have permission
-                        Console.WriteLine($"Access denied to file: {Path.GetFileName(lockFilePath)}");
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
 
         private void OnFrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
