@@ -1,3 +1,4 @@
+using System.Threading;
 using CefSharp;
 
 namespace NCEF
@@ -14,7 +15,16 @@ namespace NCEF
         }
 
         public void OnAfterCreated(IWebBrowser chromiumWebBrowser, IBrowser browser) { }
-        public bool DoClose(IWebBrowser chromiumWebBrowser, IBrowser browser) => false;
+        
+        public bool DoClose(IWebBrowser chromiumWebBrowser, IBrowser browser)
+        {
+            if (Thread.CurrentThread != Program.MainThread)
+            {
+                return false;
+            }
+            return true;
+        }
+        
         public void OnBeforeClose(IWebBrowser chromiumWebBrowser, IBrowser browser) { }
     }
 }

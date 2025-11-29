@@ -8,73 +8,60 @@ using NCEF.JavascriptRegister;
 
 namespace NCEF
 {
-    #region WebViewManager
-
-    public class WebViewManager
+    public class BrowserManager
     {
+        private readonly AppCore _appCore;
         public ChromiumWebBrowser Browser { get; private set; }
         public int MaxFPS { get; }
         public string InitialUrl { get; }
 
-        public WebViewManager(string url, int maxFPS)
+        public BrowserManager(AppCore appCore, string url, int maxFPS)
         {
+            _appCore = appCore;
             InitialUrl = url;
             MaxFPS = maxFPS;
         }
 
         public async Task InitializeAsync(int debugPort)
         {
-            string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
-
-            if (!Cef.IsInitialized.GetValueOrDefault())
-            {
-                var settings = new CefSettings
-                {
-                    CachePath = userDataPath,
-                    LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
-                    WindowlessRenderingEnabled = true
-                };
-                settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
-                settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
-                settings.CefCommandLineArgs.Add("enable-media-stream", "1");
-                settings.EnableAudio();
-
-                if (!Cef.Initialize(settings))
-                {
-                    Console.Error.WriteLine("CefSharp initialization failed!");
-                    Environment.Exit(-1);
-                }
-            }
-
             var browserSettings = new BrowserSettings
             {
                 WindowlessFrameRate = MaxFPS
             };
-            var jsBindingSettings = new CefSharp.JavascriptBinding.JavascriptBindingSettings()
-            {
-                LegacyBindingEnabled = true // 必须在浏览器创建前设置
-            };
+            
             Browser = new ChromiumWebBrowser(InitialUrl, browserSettings)
             {
                 LifeSpanHandler = new LifeSpanHandler(),
                 AudioHandler = new VolumeAudioHandler(),
                 JsDialogHandler = new JsDialogManager(),
             };
-            Browser.FrameLoadEnd += OnFrameLoadEnd;
+
             Browser.JavascriptObjectRepository.Register(
-                "JsAudioController", // JS 端访问名
-                new JsAudioController(Browser), // C# 对象实例
-                isAsync: false, // JS 调用返回 Promise
+                "appController",
+                _appCore.AppController,
+                isAsync: false,
                 options: BindingOptions.DefaultBinder
             );
+            
+            Browser.JavascriptObjectRepository.Register(
+                "JsAudioController",
+                new JsAudioController(Browser),
+                isAsync: false,
+                options: BindingOptions.DefaultBinder
+            );
+
+            Browser.FrameLoadEnd += OnFrameLoadEnd;
+            
             await Browser.WaitForInitialLoadAsync();
         }
 
 
         private void OnFrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
-            if (!e.Frame.IsValid) return;
-            if (!e.Frame.IsMain) return;
+            if (!e.Frame.IsValid || !e.Frame.IsMain) return;
+
+            e.Frame.ExecuteJavaScriptAsync("window.createBrowser = (url, width, height, spoutId, maxFps) => { window.appController.createBrowser(url, width, height, spoutId, maxFps); };");
+
             string script = @"document.addEventListener(""mousedown"",function(e){
                 const s=e.target.closest(""select"");if(!s)return;e.preventDefault();
                 const o=Array.from(s.options).map(o=>({value:o.value,text:o.text}));
@@ -96,7 +83,7 @@ namespace NCEF
                     li.style.padding=""5px 10px"";
                     li.style.cursor=""pointer"";
                     li.addEventListener(""mouseenter"",()=>li.style.background=""#eee"");
-                    li.addEventListener(""mouseleave"",()=>li.style.background=""#fff"");
+                    li.addEventListener(""mouseleave"",()=>li.style.background=""#fff"";
                     li.addEventListener(""click"",()=>{s.value=opt.value;ul.remove();s.dispatchEvent(new Event(""change"",{bubbles:true}))});
                     ul.appendChild(li)
                 });
@@ -109,6 +96,4 @@ namespace NCEF
             e.Frame.ExecuteJavaScriptAsync(script);
         }
     }
-
-    #endregion
 }
