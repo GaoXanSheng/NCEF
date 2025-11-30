@@ -80,13 +80,13 @@
         <Compile Include="SpoutDX.cs" />
         <Compile Include="src\AppCore.cs" />
         <Compile Include="src\Handler\JsDialogManager.cs" />
+        <Compile Include="src\Handler\LifeSpanHandler.cs" />
         <Compile Include="src\Handler\VolumeAudioHandler.cs" />
         <Compile Include="src\JavascriptRegister\AppController.cs" />
         <Compile Include="src\JavascriptRegister\JsAudioController.cs" />
         <Compile Include="src\Manager\BrowserManager.cs" />
         <Compile Include="src\Manager\EnvManager.cs" />
         <Compile Include="src\Manager\GraphicsManager.cs" />
-        <Compile Include="src\Manager\LifeSpanHandler.cs" />
         <Compile Include="src\PromptForm.cs" />
         <Compile Include="src\RenderSession.cs" />
     </ItemGroup>

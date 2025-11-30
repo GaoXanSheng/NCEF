@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace NCEF
 {
@@ -11,15 +12,28 @@ namespace NCEF
             _appCore = appCore;
         }
 
-        public void CreateBrowser(string url, int width, int height, string spoutId, int maxFps)
+        public async Task CreateBrowser(string url, int width, int height, string spoutId, int maxFps)
         {
-            _appCore.CreateAndStartSession(url, width, height, spoutId, maxFps).ContinueWith(task =>
+            try
             {
-                if (task.IsFaulted)
-                {
-                    Console.WriteLine($"Error creating browser session: {task.Exception}");
-                }
-            });
+                await _appCore.CreateAndStartSession(url, width, height, spoutId, maxFps);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating browser session: {ex}");
+            }
+        }
+
+        public void CloseBrowser(string spoutId)
+        {
+            try
+            {
+                _appCore.StopSession(spoutId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error closing browser session: {ex}");
+            }
         }
     }
 }

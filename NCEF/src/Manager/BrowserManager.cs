@@ -6,62 +6,77 @@ using CefSharp.OffScreen;
 using NCEF.Handler;
 using NCEF.JavascriptRegister;
 
-namespace NCEF
+namespace NCEF.Manager
 {
+    #region BrowserManager
+
     public class BrowserManager
     {
-        private readonly AppCore _appCore;
-        public ChromiumWebBrowser Browser { get; private set; }
+        public ChromiumWebBrowser chromiumWebBrowser { get; private set; }
         public int MaxFPS { get; }
         public string InitialUrl { get; }
+        private readonly string _spoutId;
+        private readonly AppController _appController;
+        private readonly Action _onClose;
 
-        public BrowserManager(AppCore appCore, string url, int maxFPS)
+        public BrowserManager(string url, int maxFPS, string spoutId, AppController appController, Action onClose)
         {
-            _appCore = appCore;
             InitialUrl = url;
             MaxFPS = maxFPS;
+            _spoutId = spoutId;
+            _appController = appController;
+            _onClose = onClose;
         }
 
         public async Task InitializeAsync(int debugPort)
         {
+            string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
+
+            if (!Cef.IsInitialized.GetValueOrDefault())
+            {
+                var settings = new CefSettings
+                {
+                    CachePath = userDataPath,
+                    LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
+                    WindowlessRenderingEnabled = true
+                };
+                settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
+                settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
+                settings.CefCommandLineArgs.Add("enable-media-stream", "1");
+                settings.EnableAudio();
+            }
+
             var browserSettings = new BrowserSettings
             {
                 WindowlessFrameRate = MaxFPS
             };
-            
-            Browser = new ChromiumWebBrowser(InitialUrl, browserSettings)
+            var jsBindingSettings = new CefSharp.JavascriptBinding.JavascriptBindingSettings()
             {
-                LifeSpanHandler = new LifeSpanHandler(),
+                LegacyBindingEnabled = true
+            };
+            chromiumWebBrowser = new ChromiumWebBrowser(InitialUrl, browserSettings)
+            {
+                LifeSpanHandler = new LifeSpanHandler(_onClose),
                 AudioHandler = new VolumeAudioHandler(),
                 JsDialogHandler = new JsDialogManager(),
             };
-
-            Browser.JavascriptObjectRepository.Register(
-                "appController",
-                _appCore.AppController,
-                isAsync: false,
+            chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
+            chromiumWebBrowser.JavascriptObjectRepository.Register(
+                "AppController",
+                _appController,
+                isAsync: true,
                 options: BindingOptions.DefaultBinder
             );
+            await chromiumWebBrowser.WaitForInitialLoadAsync();
             
-            Browser.JavascriptObjectRepository.Register(
-                "JsAudioController",
-                new JsAudioController(Browser),
-                isAsync: false,
-                options: BindingOptions.DefaultBinder
-            );
-
-            Browser.FrameLoadEnd += OnFrameLoadEnd;
-            
-            await Browser.WaitForInitialLoadAsync();
         }
 
 
         private void OnFrameLoadEnd(object sender, FrameLoadEndEventArgs e)
         {
-            if (!e.Frame.IsValid || !e.Frame.IsMain) return;
-
-            e.Frame.ExecuteJavaScriptAsync("window.createBrowser = (url, width, height, spoutId, maxFps) => { window.appController.createBrowser(url, width, height, spoutId, maxFps); };");
-
+            if (!e.Frame.IsValid) return;
+            if (!e.Frame.IsMain) return;
+            e.Frame.ExecuteJavaScriptAsync($"document.title = '{_spoutId}';");
             string script = @"document.addEventListener(""mousedown"",function(e){
                 const s=e.target.closest(""select"");if(!s)return;e.preventDefault();
                 const o=Array.from(s.options).map(o=>({value:o.value,text:o.text}));
@@ -83,7 +98,7 @@ namespace NCEF
                     li.style.padding=""5px 10px"";
                     li.style.cursor=""pointer"";
                     li.addEventListener(""mouseenter"",()=>li.style.background=""#eee"");
-                    li.addEventListener(""mouseleave"",()=>li.style.background=""#fff"";
+                    li.addEventListener(""mouseleave"",()=>li.style.background=""#fff"");
                     li.addEventListener(""click"",()=>{s.value=opt.value;ul.remove();s.dispatchEvent(new Event(""change"",{bubbles:true}))});
                     ul.appendChild(li)
                 });
@@ -96,4 +111,6 @@ namespace NCEF
             e.Frame.ExecuteJavaScriptAsync(script);
         }
     }
+
+    #endregion
 }

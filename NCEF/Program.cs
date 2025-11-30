@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace NCEF
@@ -11,13 +10,11 @@ namespace NCEF
     internal class Program
     {
         private static AppCore _appCore;
-        public static Thread MainThread { get; private set; }
 
         [STAThread]
         public static async Task Main(string[] args)
         {
-            MainThread = Thread.CurrentThread;
-            
+
             var parent = GetParentProcess();
             if (parent == null || parent.HasExited)
             {
@@ -32,11 +29,16 @@ namespace NCEF
             _appCore = new AppCore();
             await _appCore.InitAsync();
 
+            // 当父进程退出时关闭程序
             _ = MonitorParentProcess(parent);
 
+            // 阻止主线程退出
             await Task.Delay(-1);
         }
         
+
+        #region Parent Process Monitoring
+
         private static Task MonitorParentProcess(Process parent)
         {
             return Task.Run(async () =>
@@ -46,10 +48,12 @@ namespace NCEF
 
                 try
                 {
+                    // 使用轮询方式检查父进程，更可靠
                     while (true)
                     {
-                        await Task.Delay(1000);
+                        await Task.Delay(1000); // 每秒检查一次
 
+                        // 方法1: 尝试刷新进程信息
                         try
                         {
                             parent.Refresh();
@@ -61,13 +65,16 @@ namespace NCEF
                         }
                         catch (Exception)
                         {
+                            // 如果无法刷新，说明进程可能已经不存在
                             Console.WriteLine("Parent process is no longer accessible (Refresh failed).");
                             break;
                         }
 
+                        // 方法2: 尝试通过PID重新获取进程
                         try
                         {
                             Process checkProcess = Process.GetProcessById(parentPid);
+                            // 如果能获取到进程，检查进程名是否匹配（防止PID被重用）
                             if (checkProcess.ProcessName != parent.ProcessName)
                             {
                                 Console.WriteLine($"Parent process PID {parentPid} has been reused by different process.");
@@ -76,6 +83,7 @@ namespace NCEF
                         }
                         catch (ArgumentException)
                         {
+                            // 进程不存在
                             Console.WriteLine($"Parent process with PID {parentPid} no longer exists.");
                             break;
                         }
@@ -99,10 +107,16 @@ namespace NCEF
             });
         }
 
+
+        #endregion
+
+        #region User Data Folder Cleanup
+
         private static void CleanupLockedUserDataFolder()
         {
             string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
 
+            // If directory doesn't exist, nothing to clean up
             if (!Directory.Exists(userDataPath))
             {
                 Console.WriteLine("User Data folder does not exist, no cleanup needed.");
@@ -111,6 +125,7 @@ namespace NCEF
 
             Console.WriteLine("Checking for processes locking User Data folder...");
 
+            // Find all NCEF and CefSharp processes (excluding current process)
             var currentProcess = Process.GetCurrentProcess();
             var lockingProcesses = Process.GetProcessesByName("NCEF")
                 .Where(p => p.Id != currentProcess.Id)
@@ -126,7 +141,7 @@ namespace NCEF
                         Console.WriteLine($"  - {process.ProcessName} (PID: {process.Id})");
                         Console.WriteLine($"    Killing process {process.Id}...");
                         process.Kill();
-                        process.WaitForExit(5000);
+                        process.WaitForExit(5000); // Wait up to 5 seconds for process to exit
                         Console.WriteLine($"    Process {process.Id} terminated successfully.");
                     }
                     catch (Exception ex)
@@ -135,9 +150,11 @@ namespace NCEF
                     }
                 }
 
+                // Give system time to release file locks
                 System.Threading.Thread.Sleep(500);
             }
 
+            // Additionally check for lock files
             string[] lockFiles = new string[]
             {
                 Path.Combine(userDataPath, "SingletonLock"),
@@ -164,6 +181,10 @@ namespace NCEF
 
             Console.WriteLine("User Data folder cleanup completed.");
         }
+
+        #endregion
+
+        #region Parent Process Helper
 
         [StructLayout(LayoutKind.Sequential)]
         private struct PROCESS_BASIC_INFORMATION
@@ -224,5 +245,7 @@ namespace NCEF
                 return null;
             }
         }
+
+        #endregion
     }
 }
