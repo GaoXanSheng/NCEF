@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using CefSharp;
 using CefSharp.OffScreen;
 using NCEF.Handler;
-using NCEF.JavascriptRegister;
 
 namespace NCEF.Manager
 {
@@ -43,6 +42,7 @@ namespace NCEF.Manager
                 settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
                 settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
                 settings.CefCommandLineArgs.Add("enable-media-stream", "1");
+                
                 settings.EnableAudio();
             }
 
@@ -50,14 +50,9 @@ namespace NCEF.Manager
             {
                 WindowlessFrameRate = MaxFPS
             };
-            var jsBindingSettings = new CefSharp.JavascriptBinding.JavascriptBindingSettings()
-            {
-                LegacyBindingEnabled = true
-            };
             chromiumWebBrowser = new ChromiumWebBrowser(InitialUrl, browserSettings)
             {
                 LifeSpanHandler = new LifeSpanHandler(_onClose),
-                AudioHandler = new VolumeAudioHandler(),
                 JsDialogHandler = new JsDialogManager(),
             };
             chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
@@ -68,7 +63,6 @@ namespace NCEF.Manager
                 options: BindingOptions.DefaultBinder
             );
             await chromiumWebBrowser.WaitForInitialLoadAsync();
-            
         }
 
 
