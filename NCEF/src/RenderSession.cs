@@ -1,51 +1,41 @@
 ﻿using System;
-using System.Drawing;
 using System.Threading.Tasks;
-using CefSharp.OffScreen;
+using NCEF.Controller;
+using NCEF.IController;
 using NCEF.Manager;
+using NCEF.RPC;
+using Size = System.Drawing.Size;
 
 namespace NCEF
 {
     public class RenderSession : IDisposable
     {
         public BrowserManager Browser { get; private set; }
-        public GraphicsManager Graphics { get; private set; }
+        public BrowserRender RenderHandler { get; private set; }
         public string SpoutId { get; private set; }
-        public int Width { get; }
-        public int Height { get; }
-        private readonly AppController _appController;
-        private readonly EventHandler<OnPaintEventArgs> _paintEventHandler;
-        private readonly Action<RenderSession> _onSessionDisposed;
 
-        public RenderSession(string url, int width, int height, string spoutId, int maxFps, AppController appController)
+        private RpcServer<IBrowserController> _rpc; 
+
+        public RenderSession(string url, int width, int height, string spoutId, int maxFps)
         {
             SpoutId = spoutId;
-            Width = width;
-            Height = height;
-            _appController = appController;
-            Graphics = new GraphicsManager(width, height, spoutId);
-            Browser = new BrowserManager(url, maxFps, spoutId, _appController, Dispose);
-            _paintEventHandler = (s, e) => Graphics.HandleBrowserPaint(e);
+            RenderHandler = new BrowserRender(spoutId,width, height);
+            Browser = new BrowserManager(url, maxFps, spoutId, Dispose);
+            var impl = new BrowserControllerImpl(this);
+            _rpc = new RpcServer<IBrowserController>(spoutId, impl);
         }
 
-        public async Task StartAsync(int debugPort)
+        public async Task StartAsync(int width, int height)
         {
-            await Browser.InitializeAsync(debugPort);
-            Browser.chromiumWebBrowser.Size = new Size(Width, Height);
-            Browser.chromiumWebBrowser.Paint += _paintEventHandler;
+            await Browser.InitializeAsync();
+            Browser.chromiumWebBrowser.Size = new Size(width, height);
+            Browser.chromiumWebBrowser.RenderHandler = RenderHandler;
         }
-        
-
         public void Dispose()
         {
-            if (Browser?.chromiumWebBrowser != null)
-            {
-                Browser.chromiumWebBrowser.Paint -= _paintEventHandler;
-            }
+            _rpc?.Dispose();
             Browser?.chromiumWebBrowser?.Dispose();
-            Graphics?.Dispose();
-            Console.WriteLine($"Disposed Session: {SpoutId}");
-            _onSessionDisposed?.Invoke(this);
+            RenderHandler?.Dispose();
         }
     }
 }

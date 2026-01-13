@@ -21,18 +21,11 @@ namespace NCEF
                 Console.WriteLine("Parent process does not exist. Exiting.");
                 return;
             }
-
             Console.WriteLine($"ParentProcess: {parent.ProcessName} (PID: {parent.Id})");
-            
             CleanupLockedUserDataFolder();
-
             _appCore = new AppCore();
             await _appCore.InitAsync();
-
-            // 当父进程退出时关闭程序
             _ = MonitorParentProcess(parent);
-
-            // 阻止主线程退出
             await Task.Delay(-1);
         }
         
@@ -187,7 +180,7 @@ namespace NCEF
         #region Parent Process Helper
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct PROCESS_BASIC_INFORMATION
+        private struct ProcessBasicInformation
         {
             public IntPtr Reserved1;
             public IntPtr PebBaseAddress;
@@ -201,7 +194,7 @@ namespace NCEF
         private static extern int NtQueryInformationProcess(
             IntPtr processHandle,
             int processInformationClass,
-            ref PROCESS_BASIC_INFORMATION processInformation,
+            ref ProcessBasicInformation processInformation,
             uint processInformationLength,
             out uint returnLength);
 
@@ -209,7 +202,7 @@ namespace NCEF
         {
             try
             {
-                var pbi = new PROCESS_BASIC_INFORMATION();
+                var pbi = new ProcessBasicInformation();
                 uint retLen;
                 int status = NtQueryInformationProcess(
                     Process.GetCurrentProcess().Handle, 

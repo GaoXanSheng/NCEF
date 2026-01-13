@@ -15,19 +15,17 @@ namespace NCEF.Manager
         public int MaxFPS { get; }
         public string InitialUrl { get; }
         private readonly string _spoutId;
-        private readonly AppController _appController;
         private readonly Action _onClose;
 
-        public BrowserManager(string url, int maxFPS, string spoutId, AppController appController, Action onClose)
+        public BrowserManager(string url, int maxFPS, string spoutId, Action onClose)
         {
             InitialUrl = url;
             MaxFPS = maxFPS;
             _spoutId = spoutId;
-            _appController = appController;
             _onClose = onClose;
         }
 
-        public async Task InitializeAsync(int debugPort)
+        public async Task InitializeAsync()
         {
             string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
 
@@ -39,7 +37,6 @@ namespace NCEF.Manager
                     LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
                     WindowlessRenderingEnabled = true
                 };
-                settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
                 settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
                 settings.CefCommandLineArgs.Add("enable-media-stream", "1");
                 
@@ -48,7 +45,7 @@ namespace NCEF.Manager
 
             var browserSettings = new BrowserSettings
             {
-                WindowlessFrameRate = MaxFPS
+                WindowlessFrameRate = MaxFPS,
             };
             chromiumWebBrowser = new ChromiumWebBrowser(InitialUrl, browserSettings)
             {
@@ -56,12 +53,6 @@ namespace NCEF.Manager
                 JsDialogHandler = new JsDialogManager(),
             };
             chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
-            chromiumWebBrowser.JavascriptObjectRepository.Register(
-                "AppController",
-                _appController,
-                isAsync: true,
-                options: BindingOptions.DefaultBinder
-            );
             await chromiumWebBrowser.WaitForInitialLoadAsync();
         }
 

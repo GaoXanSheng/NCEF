@@ -1,8 +1,7 @@
-using CefSharp;
 using System;
-using System.Threading;
+using CefSharp;
 
-namespace NCEF
+namespace NCEF.Handler
 {
     public class LifeSpanHandler : ILifeSpanHandler
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NCEF
+namespace NCEF.Manager
 {
     #region EnvManager
     public static class EnvManager

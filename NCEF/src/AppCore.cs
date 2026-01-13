@@ -2,51 +2,75 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows.Forms; // 如果需要获取屏幕大小
+using System.Windows.Forms;
 using CefSharp;
 using CefSharp.OffScreen;
+using NCEF.IController;
+using NCEF.Manager;
+using NCEF.RPC;
 
 namespace NCEF
 {
-    public class AppCore
+    public class AppCore : IMasterController
     {
-        // 管理所有会话的列表
         private Dictionary<string, RenderSession> _sessions = new Dictionary<string, RenderSession>();
-        private AppController _appController;
-        private int _debugPort; // Store the debug port
+        private RpcServer<IMasterController> _masterRpc;
 
         public async Task InitAsync()
         {
-            _appController = new AppController(this);
-            _debugPort = EnvManager.GetInt("BROWSER_PORT", 9222); // Get debug port here
-            InitGlobalCef(_debugPort);
-            int maxFps = EnvManager.GetInt("MAXFPS", 60);
+            int debugPort = EnvManager.GetInt("BROWSER_PORT", 9222);
+            InitGlobalCef(debugPort);
+            string masterId = EnvManager.GetString("MASTER_RPC_ID", "GLOBAL_NCEF");
+            _masterRpc = new RpcServer<IMasterController>(masterId, this);
             var bounds = Screen.PrimaryScreen.Bounds;
-            string mainUrl = EnvManager.GetString("CUSTOMIZE_LOADING_SCREEN_URL", "https://google.com");
-            string mainSpoutId = EnvManager.GetString("SPOUT_ID", "NCEF");
-            await CreateAndStartSession(mainUrl, bounds.Width, bounds.Height, mainSpoutId, maxFps);
+            // Create a dummy session to keep CEF alive
+            CreateAndStartSession("about:blank", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 1).Wait();
+            Console.WriteLine("NCEF Master Ready.");
         }
 
+        public string CreateBrowser(string url, int w, int h, int fps)
+        {
+            string spoutName = "BRW_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            if (_sessions.ContainsKey(spoutName))
+                return spoutName;
+            var session = new RenderSession(url, w, h, spoutName, fps);
+            _sessions.Add(spoutName, session);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await session.StartAsync(w, h);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"StartAsync failed [{spoutName}]: {e}");
+                    _sessions.Remove(spoutName);
+                }
+            });
+
+            return spoutName;
+        }
+
+        public void StopBrowser(string spoutId) => StopSession(spoutId);
+        public void Shutdown() => Environment.Exit(0);
+        
         public async Task CreateAndStartSession(string url, int w, int h, string spoutName, int fps)
         {
             if (_sessions.ContainsKey(spoutName)) return;
-            var renderSession = new RenderSession(url, w, h, spoutName, fps, _appController);
-            await renderSession.StartAsync(0);
+            var renderSession = new RenderSession(url, w, h, spoutName, fps);
+            await renderSession.StartAsync(w,h);
             _sessions.Add(spoutName, renderSession);
-            Console.WriteLine($"Started Session: {spoutName} -> {url}");
         }
 
-        public Task StopSession(string spoutName)
+        public void StopSession(string spoutName)
         {
-            if (_sessions.ContainsKey(spoutName))
+            if (_sessions.TryGetValue(spoutName, out var session))
             {
-                _sessions[spoutName].Dispose();
+                session.Dispose();
                 _sessions.Remove(spoutName);
-                Console.WriteLine($"Stopped Session: {spoutName}");
+                Console.WriteLine($"RPC Dispose: {spoutName}");
             }
-            return Task.CompletedTask;
         }
-
         private void InitGlobalCef(int debugPort)
         {
             if (Cef.IsInitialized.GetValueOrDefault()) return;
@@ -69,7 +93,6 @@ namespace NCEF
                 throw new Exception("CefSharp initialization failed!");
             }
         }
-
         public void OnClosed()
         {
             _sessions.Clear();
