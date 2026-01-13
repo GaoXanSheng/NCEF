@@ -22,6 +22,8 @@ namespace NCEF
             InitGlobalCef(debugPort);
             string masterId = EnvManager.GetString("MASTER_RPC_ID", "GLOBAL_NCEF");
             _masterRpc = new RpcServer<IMasterController>(masterId, this);
+
+
             var bounds = Screen.PrimaryScreen.Bounds;
             // Create a dummy session to keep CEF alive
             CreateAndStartSession("about:blank", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 1).Wait();
@@ -53,12 +55,12 @@ namespace NCEF
 
         public void StopBrowser(string spoutId) => StopSession(spoutId);
         public void Shutdown() => Environment.Exit(0);
-        
+
         public async Task CreateAndStartSession(string url, int w, int h, string spoutName, int fps)
         {
             if (_sessions.ContainsKey(spoutName)) return;
             var renderSession = new RenderSession(url, w, h, spoutName, fps);
-            await renderSession.StartAsync(w,h);
+            await renderSession.StartAsync(w, h);
             _sessions.Add(spoutName, renderSession);
         }
 
@@ -71,6 +73,7 @@ namespace NCEF
                 Console.WriteLine($"RPC Dispose: {spoutName}");
             }
         }
+
         private void InitGlobalCef(int debugPort)
         {
             if (Cef.IsInitialized.GetValueOrDefault()) return;
@@ -83,7 +86,11 @@ namespace NCEF
                 MultiThreadedMessageLoop = true
             };
 
-            settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
+            if (debugPort != 0)
+            {
+                settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
+            }
+
             settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
             settings.CefCommandLineArgs.Add("enable-media-stream", "1");
             settings.EnableAudio();
@@ -93,6 +100,7 @@ namespace NCEF
                 throw new Exception("CefSharp initialization failed!");
             }
         }
+
         public void OnClosed()
         {
             _sessions.Clear();

@@ -9,7 +9,8 @@ namespace NCEF.IController
         void ExecuteJs(string script);
         string GetUrl();
         bool Resize(int width, int height, int deviceScaleFactor, bool mobile);
-
+        void SetAudioMuted(bool b);
+        void SetVolume(float vol);
         // --- 新增功能 ---
 
         /// <summary>
@@ -48,5 +49,7 @@ namespace NCEF.IController
         /// </summary>
         /// <returns>IntPtr 句柄 或 CefSharp.Enums.CursorType 枚举的整数值</returns>
         int GetCursorType();
+        
+        void ResolveJsPromise(string reqId, object result);
     }
 }

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using CefSharp;
 using CefSharp.OffScreen;
+using NCEF.Controller;
 using NCEF.Handler;
 
 namespace NCEF.Manager
@@ -25,21 +26,21 @@ namespace NCEF.Manager
             _onClose = onClose;
         }
 
-        public async Task InitializeAsync()
+        public async Task InitializeAsync(BrowserControllerImpl _controller)
         {
             string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
-
+            CefSharpSettings.ConcurrentTaskExecution = true; 
             if (!Cef.IsInitialized.GetValueOrDefault())
             {
                 var settings = new CefSettings
                 {
                     CachePath = userDataPath,
                     LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
-                    WindowlessRenderingEnabled = true
+                    WindowlessRenderingEnabled = true,
+                    MultiThreadedMessageLoop = true,
                 };
                 settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
                 settings.CefCommandLineArgs.Add("enable-media-stream", "1");
-                
                 settings.EnableAudio();
             }
 
@@ -52,8 +53,10 @@ namespace NCEF.Manager
                 LifeSpanHandler = new LifeSpanHandler(_onClose),
                 JsDialogHandler = new JsDialogManager(),
             };
+            _controller.BindJsBridge();
             chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
             await chromiumWebBrowser.WaitForInitialLoadAsync();
+
         }
 
 
