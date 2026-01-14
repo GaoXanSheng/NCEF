@@ -32,23 +32,12 @@ namespace NCEF
 
         public string CreateBrowser(string url, int w, int h, int fps)
         {
-            string spoutName = "BRW_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            string spoutName = "N_NCEF_" + Guid.NewGuid().ToString("N").Substring(0, 5);
             if (_sessions.ContainsKey(spoutName))
                 return spoutName;
             var session = new RenderSession(url, w, h, spoutName, fps);
             _sessions.Add(spoutName, session);
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await session.StartAsync(w, h);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"StartAsync failed [{spoutName}]: {e}");
-                    _sessions.Remove(spoutName);
-                }
-            });
+            session.StartAsync(w, h).Wait();
 
             return spoutName;
         }

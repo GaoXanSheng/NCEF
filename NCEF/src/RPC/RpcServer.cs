@@ -12,7 +12,6 @@ namespace NCEF.RPC
 {
     public class RpcServer<T> : IDisposable
     {
-        // --- 魔法字常量定义 ---
         private const string PREFIX_RPC_MAP = "NCEF_RPC_";
         private const string PREFIX_REQ_EVENT = "NCEF_REQ_";
         private const string PREFIX_RES_EVENT = "NCEF_RES_";
@@ -20,14 +19,14 @@ namespace NCEF.RPC
         private const string PREFIX_EVT_READY = "NCEF_EVT_READY_";
         private const string PREFIX_EVT_ACK = "NCEF_EVT_ACK_";
 
-        private const int RPC_MAP_SIZE = 1024 * 1024;   
-        private const int EVT_MAP_SIZE = 1024 * 1024;    
+        private const int RPC_MAP_SIZE = 1024 * 1024 * 8;   
+        private const int EVT_MAP_SIZE = RPC_MAP_SIZE /2;    
         private const int REQ_OFFSET = 0;
-        private const int RES_OFFSET = 1024 * 1024;       
+        private const int RES_OFFSET = RPC_MAP_SIZE/2;       
         private const int DATA_HEADER_SIZE = 4;        
 
-        private const int RPC_WAIT_TIMEOUT_MS = 1000;
-        private const int EVENT_ACK_TIMEOUT_MS = 2000;
+        private const int RPC_WAIT_TIMEOUT_MS = 10000;
+        private const int EVENT_ACK_TIMEOUT_MS = 10000;
         
         private const string LOG_TAG = "[RPC Server] ";
 
@@ -64,10 +63,7 @@ namespace NCEF.RPC
 
             Console.WriteLine($"{LOG_TAG}Started for ID: {rpcId}");
         }
-
-        /// <summary>
-        /// 向客户端推送异步事件
-        /// </summary>
+        
         public void SendEvent(string method, params object[] args)
         {
             if (_cts.IsCancellationRequested) return;
@@ -83,14 +79,10 @@ namespace NCEF.RPC
                     RpcPacket packet = _eventQueue.Take(_cts.Token);
                     string json = JsonConvert.SerializeObject(packet);
                     byte[] data = Encoding.UTF8.GetBytes(json);
-
-                    // 写入事件数据
                     _evtAccessor.Write(0, data.Length);
                     _evtAccessor.WriteArray(DATA_HEADER_SIZE, data, 0, data.Length);
                     
                     _evtDataReady.Set();
-
-                    // 等待客户端确认响应
                     if (!_evtDataAck.WaitOne(EVENT_ACK_TIMEOUT_MS)) 
                     {
                         Console.WriteLine($"{LOG_TAG}Warning: Java client timed out accepting event.");
