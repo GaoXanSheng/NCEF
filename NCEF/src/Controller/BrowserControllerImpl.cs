@@ -89,7 +89,6 @@ namespace NCEF.Controller
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
             _session.AudioManager.SetVolume(vol);
         }
-
         public void SendMouseClick(int x, int y, int button, bool mouseUp)
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
