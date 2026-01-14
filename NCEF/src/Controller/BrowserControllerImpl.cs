@@ -49,7 +49,6 @@ namespace NCEF.Controller
 
         public void BindJsBridge()
         {
-            if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
             var browser = _session.Browser?.chromiumWebBrowser;
             if (browser != null && _jsBridge != null)
             {
