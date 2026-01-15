@@ -12,11 +12,12 @@ namespace NCEF.Manager
 
     public class BrowserManager
     {
-        public ChromiumWebBrowser chromiumWebBrowser { get; private set; }
+        public D3DChromiumWebBrowser chromiumWebBrowser { get; private set; }
         public int MaxFPS { get; }
         public string InitialUrl { get; }
         private readonly string _spoutId;
         private readonly Action _onClose;
+        private BrowserRender _browserRender;
 
         public BrowserManager(string url, int maxFPS, string spoutId, Action onClose)
         {
@@ -28,20 +29,16 @@ namespace NCEF.Manager
 
         public async Task InitializeAsync(BrowserControllerImpl _controller)
         {
-            string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
-            CefSharpSettings.ConcurrentTaskExecution = true; 
+
+            CefSharpSettings.ConcurrentTaskExecution = true;
             if (!Cef.IsInitialized.GetValueOrDefault())
             {
                 var settings = new CefSettings
                 {
-                    CachePath = userDataPath,
                     LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
                     WindowlessRenderingEnabled = true,
-                    MultiThreadedMessageLoop = true,
+                    
                 };
-                settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
-                settings.CefCommandLineArgs.Add("enable-media-stream", "1");
-                settings.CefCommandLineArgs.Add("autoplay-policy", "no-user-gesture-required");
                 settings.EnableAudio();
             }
 
@@ -49,15 +46,15 @@ namespace NCEF.Manager
             {
                 WindowlessFrameRate = MaxFPS,
             };
-            chromiumWebBrowser = new ChromiumWebBrowser(InitialUrl, browserSettings)
+            string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
+            chromiumWebBrowser = new D3DChromiumWebBrowser(InitialUrl, browserSettings,Path.Combine(Environment.CurrentDirectory,userDataPath))
             {
                 LifeSpanHandler = new LifeSpanHandler(_onClose),
                 JsDialogHandler = new JsDialogManager(),
             };
-            _controller.BindJsBridge();
             chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
-            await chromiumWebBrowser.WaitForInitialLoadAsync();
-
+            await chromiumWebBrowser.WaitReadyAsync();
+            _controller.BindJsBridge();
         }
 
 

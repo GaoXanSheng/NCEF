@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using NCEF.Controller;
 using NCEF.Handler;
@@ -15,27 +16,28 @@ namespace NCEF
         public BrowserRender RenderHandler { get; private set; }
         public string SpoutId { get; private set; }
         public BrowserAudioManager AudioManager { get; private set; }
-        private RpcServer<IBrowserController> _rpc; 
+        private RpcServer<IBrowserController> _rpc;
         private BrowserControllerImpl _controller;
-        public RenderSession(string url, int width, int height, string spoutId, int maxFps)
+
+        public RenderSession(string url, string spoutId, int maxFps)
         {
             SpoutId = spoutId;
             Browser = new BrowserManager(url, maxFps, spoutId, Dispose);
-            RenderHandler = new BrowserRender(spoutId,width, height);
+            RenderHandler = new BrowserRender(spoutId);
             AudioManager = new BrowserAudioManager();
             _controller = new BrowserControllerImpl(this);
             _rpc = new RpcServer<IBrowserController>(spoutId, _controller);
             _controller.SetJsBridge(new JsBridge(_rpc));
         }
 
-        public async Task StartAsync(int width, int height)
+        public async Task StartAsync()
         {
             await Browser.InitializeAsync(_controller);
-            Browser.chromiumWebBrowser.Size = new Size(width, height);
-            Browser.chromiumWebBrowser.RenderHandler = RenderHandler;
+            Browser.chromiumWebBrowser.Size= new Size(800, 600);
             Browser.chromiumWebBrowser.AudioHandler = AudioManager;
-
+            Browser.chromiumWebBrowser.RenderHandler = RenderHandler;
         }
+
         public void Dispose()
         {
             _rpc?.Dispose();

@@ -19,15 +19,15 @@ namespace NCEF.RPC
         private const string PREFIX_EVT_READY = "NCEF_EVT_READY_";
         private const string PREFIX_EVT_ACK = "NCEF_EVT_ACK_";
 
-        private const int RPC_MAP_SIZE = 1024 * 1024 * 8;   
-        private const int EVT_MAP_SIZE = RPC_MAP_SIZE /2;    
+        private const int RPC_MAP_SIZE = 1024 * 1024 * 8;
+        private const int EVT_MAP_SIZE = RPC_MAP_SIZE / 2;
         private const int REQ_OFFSET = 0;
-        private const int RES_OFFSET = RPC_MAP_SIZE/2;       
-        private const int DATA_HEADER_SIZE = 4;        
+        private const int RES_OFFSET = RPC_MAP_SIZE / 2;
+        private const int DATA_HEADER_SIZE = 4;
 
         private const int RPC_WAIT_TIMEOUT_MS = 10000;
         private const int EVENT_ACK_TIMEOUT_MS = 10000;
-        
+
         private const string LOG_TAG = "[RPC Server] ";
 
         private readonly T _impl;
@@ -35,13 +35,13 @@ namespace NCEF.RPC
         private readonly MemoryMappedViewAccessor _rpcAccessor;
         private readonly EventWaitHandle _reqEvt;
         private readonly EventWaitHandle _resEvt;
-        
-        private readonly MemoryMappedFile _evtMmf;   
+
+        private readonly MemoryMappedFile _evtMmf;
         private readonly MemoryMappedViewAccessor _evtAccessor;
-        private readonly EventWaitHandle _evtDataReady;  
-        private readonly EventWaitHandle _evtDataAck;   
-        
-        private readonly BlockingCollection<RpcPacket> _eventQueue = new BlockingCollection<RpcPacket>();
+        private readonly EventWaitHandle _evtDataReady;
+        private readonly EventWaitHandle _evtDataAck;
+
+        private readonly BlockingCollection<RpcPacket> _eventQueue = new BlockingCollection<RpcPacket>(new ConcurrentQueue<RpcPacket>());
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         public RpcServer(string rpcId, T implementation)
@@ -57,44 +57,56 @@ namespace NCEF.RPC
             _evtAccessor = _evtMmf.CreateViewAccessor();
             _evtDataReady = new EventWaitHandle(false, EventResetMode.AutoReset, PREFIX_EVT_READY + rpcId);
             _evtDataAck = new EventWaitHandle(false, EventResetMode.AutoReset, PREFIX_EVT_ACK + rpcId);
-            
+
             Task.Run(ListenForRpcLoop, _cts.Token);
             Task.Run(ProcessEventQueueLoop, _cts.Token);
 
             Console.WriteLine($"{LOG_TAG}Started for ID: {rpcId}");
         }
-        
+
         public void SendEvent(string method, params object[] args)
         {
-            if (_cts.IsCancellationRequested) return;
+            if (_cts.IsCancellationRequested || _eventQueue.IsAddingCompleted)
+                return;
+
             _eventQueue.Add(new RpcPacket { Method = method, Args = args });
         }
 
+
         private void ProcessEventQueueLoop()
         {
-            while (!_cts.IsCancellationRequested)
+            try
             {
-                try
+                while (!_cts.IsCancellationRequested)
                 {
-                    RpcPacket packet = _eventQueue.Take(_cts.Token);
+                    if (!_eventQueue.TryTake(out var packet, 100))
+                        continue;
+
                     string json = JsonConvert.SerializeObject(packet);
                     byte[] data = Encoding.UTF8.GetBytes(json);
+
                     _evtAccessor.Write(0, data.Length);
                     _evtAccessor.WriteArray(DATA_HEADER_SIZE, data, 0, data.Length);
-                    
+
                     _evtDataReady.Set();
-                    if (!_evtDataAck.WaitOne(EVENT_ACK_TIMEOUT_MS)) 
+
+                    if (!_evtDataAck.WaitOne(EVENT_ACK_TIMEOUT_MS))
                     {
                         Console.WriteLine($"{LOG_TAG}Warning: Java client timed out accepting event.");
                     }
                 }
-                catch (OperationCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"{LOG_TAG}Event Loop Error: {ex.Message}");
-                }
+            }
+            catch (ArgumentNullException e)
+            {
+                // Thrown when Dispose is called on the collection.
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{LOG_TAG}Event Loop Fatal Error!");
+                Console.WriteLine(ex);
             }
         }
+
 
         private void ListenForRpcLoop()
         {
@@ -107,13 +119,13 @@ namespace NCEF.RPC
                         int len = _rpcAccessor.ReadInt32(REQ_OFFSET);
                         byte[] data = new byte[len];
                         _rpcAccessor.ReadArray(REQ_OFFSET + DATA_HEADER_SIZE, data, 0, len);
-                        
+
                         var req = JsonConvert.DeserializeObject<RpcPacket>(Encoding.UTF8.GetString(data));
                         if (req == null) continue;
 
                         object result = null;
                         MethodInfo method = typeof(T).GetMethod(req.Method);
-                        
+
                         if (method != null)
                         {
                             ParameterInfo[] parameters = method.GetParameters();
@@ -133,21 +145,22 @@ namespace NCEF.RPC
                                     }
                                 }
                             }
+
                             result = method.Invoke(_impl, req.Args);
                         }
 
                         string resJson = JsonConvert.SerializeObject(result);
                         byte[] resBytes = Encoding.UTF8.GetBytes(resJson);
-                        
-                        _rpcAccessor.Write(RES_OFFSET, resBytes.Length); 
+
+                        _rpcAccessor.Write(RES_OFFSET, resBytes.Length);
                         _rpcAccessor.WriteArray(RES_OFFSET + DATA_HEADER_SIZE, resBytes, 0, resBytes.Length);
-                        
+
                         _resEvt.Set();
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"{LOG_TAG}Invoke Error: {ex.Message}");
-                        _resEvt.Set(); 
+                        _resEvt.Set();
                     }
                 }
             }
@@ -156,7 +169,9 @@ namespace NCEF.RPC
         public void Dispose()
         {
             _cts.Cancel();
-            
+            _eventQueue.CompleteAdding();
+            _evtDataReady?.Set();
+
             _rpcAccessor?.Dispose();
             _rpcMmf?.Dispose();
             _reqEvt?.Dispose();
@@ -166,15 +181,16 @@ namespace NCEF.RPC
             _evtMmf?.Dispose();
             _evtDataReady?.Dispose();
             _evtDataAck?.Dispose();
-            
+
             _eventQueue?.Dispose();
             _cts?.Dispose();
         }
 
-        private class RpcPacket 
-        { 
-            public string Method { get; set; } 
-            public object[] Args { get; set; } 
+
+        private class RpcPacket
+        {
+            public string Method { get; set; }
+            public object[] Args { get; set; }
         }
     }
 }

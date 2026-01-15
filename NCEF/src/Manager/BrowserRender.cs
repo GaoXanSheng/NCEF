@@ -1,79 +1,41 @@
 ﻿using System;
+using System.Threading;
+using System.Windows.Forms;
 using CefSharp;
 using CefSharp.Enums;
 using CefSharp.OffScreen;
-using CefSharp.Structs; 
-using SharpDX;
+using CefSharp.Structs;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
-using SharpDX.DXGI;
 using Device = SharpDX.Direct3D11.Device;
+using Device1 = SharpDX.Direct3D11.Device1;
 
 namespace NCEF.Manager
 {
     public class BrowserRender : IRenderHandler, IDisposable
     {
-        private Device _dxDevice;
-        private Texture2D _mainTexture;
-        private Texture2D _popupTexture; 
+        private Device1 _dxDevice;
         private SpoutDX _spoutSender;
-        private readonly object _renderLock = new object();
-        private Rect _popupRect;
-
-        private int _width;
-        private int _height;
         public CursorType CurrentCursor { get; private set; } = CursorType.Pointer;
+        private D3DChromiumWebBrowser _browser;
+        private Thread renderThread;
 
-        public BrowserRender(string spoutId, int width, int height)
+        public BrowserRender(string spoutId)
         {
-            _width = width;
-            _height = height;
-
-            InitializeDirectX(spoutId, width, height);
+            InitializeDirectX(spoutId);
+        }
+        public void setBrowser(D3DChromiumWebBrowser browser)
+        {
+            _browser = browser;
         }
 
-        private void InitializeDirectX(string spoutId, int width, int height)
+        private void InitializeDirectX(string spoutId)
         {
-            _dxDevice = new Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-            _mainTexture = CreateTexture(width, height);
-            
+            var device0 = new Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
+            _dxDevice = device0.QueryInterface<Device1>();
             _spoutSender = new SpoutDX();
-            _spoutSender.OpenDirectX(_dxDevice.NativePointer);
             _spoutSender.SetSenderName(spoutId);
-        }
-
-        private Texture2D CreateTexture(int width, int height)
-        {
-            return new Texture2D(_dxDevice, new Texture2DDescription
-            {
-                Width = width,
-                Height = height,
-                MipLevels = 1,
-                ArraySize = 1,
-                Format = Format.B8G8R8A8_UNorm,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = ResourceUsage.Dynamic,
-                BindFlags = BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.Write
-            });
-        }
-        
-        public void Resize(int width, int height)
-        {
-            lock (_renderLock)
-            {
-                _width = width;
-                _height = height;
-
-                // 重建主纹理
-                _mainTexture?.Dispose();
-                _mainTexture = CreateTexture(width, height);
-            }
-        }
-        
-        public Rect GetViewRect()
-        {
-            return new Rect(0, 0, _width, _height);
+            _spoutSender.OpenDirectX(_dxDevice.NativePointer);
         }
 
         public void OnCursorChange(IntPtr cursor, CursorType type, CursorInfo customCursorInfo)
@@ -83,122 +45,66 @@ namespace NCEF.Manager
 
         public void OnPaint(PaintElementType type, Rect dirtyRect, IntPtr buffer, int width, int height)
         {
-            lock (_renderLock)
-            {
-                if (_dxDevice == null || _mainTexture == null || _mainTexture.IsDisposed || buffer == IntPtr.Zero)
-                    return;
-
-                var context = _dxDevice.ImmediateContext;
-                if (type == PaintElementType.Popup)
-                {
-                    HandlePopupPaint(context, dirtyRect, buffer, width, height);
-                }
-                else 
-                {
-                    HandleViewPaint(context, buffer, width, height);
-                }
-                if (_popupTexture != null && !_popupTexture.IsDisposed)
-                {
-                    var srcRegion = new ResourceRegion(0, 0, 0, _popupTexture.Description.Width, _popupTexture.Description.Height, 1);
-                    context.CopySubresourceRegion(_popupTexture, 0, srcRegion, _mainTexture, 0, _popupRect.X, _popupRect.Y, 0);
-                }
-                _spoutSender.SendTexture(_mainTexture.NativePointer);
-            }
+            Console.WriteLine("SOFTWARE PAINT CALLED");
         }
 
-        private void HandleViewPaint(DeviceContext context, IntPtr buffer, int width, int height)
-        {
-            if (width != _mainTexture.Description.Width || height != _mainTexture.Description.Height) return;
-
-            var dataBox = context.MapSubresource(_mainTexture, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None);
-            try
-            {
-                int sourcePitch = width * 4;
-                if (dataBox.RowPitch == sourcePitch)
-                {
-                    Utilities.CopyMemory(dataBox.DataPointer, buffer, height * sourcePitch);
-                }
-                else
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        Utilities.CopyMemory(
-                            dataBox.DataPointer + y * dataBox.RowPitch,
-                            buffer + y * sourcePitch,
-                            sourcePitch
-                        );
-                    }
-                }
-            }
-            finally
-            {
-                context.UnmapSubresource(_mainTexture, 0);
-            }
-        }
-
-        private void HandlePopupPaint(DeviceContext context, Rect dirtyRect, IntPtr buffer, int width, int height)
-        {
-            _popupRect = dirtyRect;
-            if (width == 0 || height == 0) return;
-            if (_popupTexture == null || _popupTexture.IsDisposed ||
-                _popupTexture.Description.Width != width ||
-                _popupTexture.Description.Height != height)
-            {
-                _popupTexture?.Dispose();
-                _popupTexture = CreateTexture(width, height);
-            }
-
-            var dataBox = context.MapSubresource(_popupTexture, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None);
-            try
-            {
-                int sourcePitch = width * 4;
-                int destPitch = dataBox.RowPitch;
-                int copyBytes = Math.Min(sourcePitch, destPitch);
-
-                if (sourcePitch == destPitch)
-                {
-                    Utilities.CopyMemory(dataBox.DataPointer, buffer, height * sourcePitch);
-                }
-                else
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        Utilities.CopyMemory(
-                            dataBox.DataPointer + y * destPitch,
-                            buffer + y * sourcePitch,
-                            copyBytes
-                        );
-                    }
-                }
-            }
-            finally
-            {
-                context.UnmapSubresource(_popupTexture, 0);
-            }
-        }
         public void Dispose()
         {
-            lock (_renderLock)
+            _spoutSender?.Dispose();
+            _dxDevice?.Dispose();
+            _spoutSender = null;
+            _dxDevice = null;
+        }
+
+
+        public ScreenInfo? GetScreenInfo() => null;
+
+        public Rect GetViewRect()
+        {
+            return new Rect(0, 0, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+        }
+
+        public bool GetScreenPoint(int vx, int vy, out int sx, out int sy)
+        {
+            sx = vx;
+            sy = vy;
+            return false;
+        }
+
+        public void OnAcceleratedPaint(PaintElementType type, Rect _dirtyRect, AcceleratedPaintInfo info)
+        {
+            if (info.SharedTextureHandle == IntPtr.Zero)
+                return;
+            using (Texture2D cefTex = _dxDevice.OpenSharedResource1<Texture2D>(info.SharedTextureHandle))
             {
-                _mainTexture?.Dispose();
-                _popupTexture?.Dispose();
-                _spoutSender?.Dispose();
-                _dxDevice?.Dispose();
-                
-                _mainTexture = null;
-                _popupTexture = null;
-                _spoutSender = null;
-                _dxDevice = null;
+                _spoutSender.SendTexture(cefTex.NativePointer);
             }
         }
-        public ScreenInfo? GetScreenInfo() => null;
-        public bool GetScreenPoint(int viewX, int viewY, out int screenX, out int screenY) { screenX = viewX; screenY = viewY; return false; }
-        public void OnAcceleratedPaint(PaintElementType type, Rect dirtyRect, AcceleratedPaintInfo acceleratedPaintInfo) { }
-        public void OnImeCompositionRangeChanged(Range selectedRange, Rect[] characterBounds) { }
-        public void OnPopupShow(bool show) { }
-        public void OnPopupSize(Rect rect) { }
-        public void OnVirtualKeyboardRequested(IBrowser browser, TextInputMode inputMode) { }
-        public bool StartDragging(IDragData dragData, DragOperationsMask mask, int x, int y) => false;
-        public void UpdateDragCursor(DragOperationsMask operationMask) { }
+        
+
+        public void OnImeCompositionRangeChanged(Range r, Rect[] b)
+        {
+        }
+
+        public void OnPopupShow(bool show)
+        {
+        }
+
+        private Rect popupRect;
+
+        public void OnPopupSize(Rect rect)
+        {
+            popupRect = rect;
+        }
+
+        public void OnVirtualKeyboardRequested(IBrowser b, TextInputMode m)
+        {
+        }
+
+        public bool StartDragging(IDragData d, DragOperationsMask m, int x, int y) => false;
+
+        public void UpdateDragCursor(DragOperationsMask m)
+        {
+        }
     }
 }

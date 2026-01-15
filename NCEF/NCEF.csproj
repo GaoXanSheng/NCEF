@@ -14,6 +14,7 @@
         <AssemblyName>NCEF</AssemblyName>
         <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|X64' ">
@@ -67,11 +68,6 @@
         <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
           <HintPath>..\packages\Newtonsoft.Json.13.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
         </Reference>
-        <Reference Include="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-        <Reference Include="mscorlib" />
-        <Reference Include="SpoutDXWrapper">
-            <HintPath>./SpoutDXWrapper.dll</HintPath>
-        </Reference>
         <Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
           <HintPath>..\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll</HintPath>
         </Reference>
@@ -80,6 +76,11 @@
         </Reference>
         <Reference Include="SharpDX.DXGI, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
           <HintPath>..\packages\SharpDX.DXGI.4.2.0\lib\net45\SharpDX.DXGI.dll</HintPath>
+        </Reference>
+        <Reference Include="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+        <Reference Include="mscorlib" />
+        <Reference Include="SpoutDXWrapper">
+            <HintPath>./SpoutDXWrapper.dll</HintPath>
         </Reference>
         <Reference Include="System" />
         <Reference Include="System.Core" />
@@ -121,6 +122,7 @@
         <Compile Include="src\Manager\BrowserAudioManager.cs" />
         <Compile Include="src\Manager\BrowserManager.cs" />
         <Compile Include="src\Manager\BrowserRender.cs" />
+        <Compile Include="src\Manager\D3DChromiumWebBrowser.cs" />
         <Compile Include="src\Manager\EnvManager.cs" />
         <Compile Include="src\PromptForm.cs" />
         <Compile Include="src\RenderSession.cs" />

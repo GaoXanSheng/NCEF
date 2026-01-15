@@ -25,8 +25,11 @@ namespace NCEF
 
 
             var bounds = Screen.PrimaryScreen.Bounds;
-            // Create a dummy session to keep CEF alive
-            CreateAndStartSession("about:blank", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 1).Wait();
+
+        #if DEBUG
+            CreateAndStartSession("https://testufo.com/", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 60).Wait();
+        #endif
+            CreateAndStartSession("about:blank", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 60).Wait();
             Console.WriteLine("NCEF Master Ready.");
         }
 
@@ -35,9 +38,9 @@ namespace NCEF
             string spoutName = "N_NCEF_" + Guid.NewGuid().ToString("N").Substring(0, 5);
             if (_sessions.ContainsKey(spoutName))
                 return spoutName;
-            var session = new RenderSession(url, w, h, spoutName, fps);
+            var session = new RenderSession(url, spoutName, fps);
             _sessions.Add(spoutName, session);
-            session.StartAsync(w, h).Wait();
+            session.StartAsync().Wait();
 
             return spoutName;
         }
@@ -48,8 +51,8 @@ namespace NCEF
         public async Task CreateAndStartSession(string url, int w, int h, string spoutName, int fps)
         {
             if (_sessions.ContainsKey(spoutName)) return;
-            var renderSession = new RenderSession(url, w, h, spoutName, fps);
-            await renderSession.StartAsync(w, h);
+            var renderSession = new RenderSession(url, spoutName, fps);
+            await renderSession.StartAsync();
             _sessions.Add(spoutName, renderSession);
         }
 

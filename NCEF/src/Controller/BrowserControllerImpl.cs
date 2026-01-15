@@ -7,13 +7,15 @@ namespace NCEF.Controller
     public class BrowserControllerImpl : IBrowserController
     {
         private readonly RenderSession _session;
-        private JsBridge _jsBridge; 
+        private JsBridge _jsBridge;
 
-        public BrowserControllerImpl(RenderSession session) => _session = session;
+        public BrowserControllerImpl(RenderSession session)
+        {
+            _session = session;
+        }
 
         public string GetSpoutId()
         {
-            if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return null;
             return _session.SpoutId;
         }
 
@@ -54,9 +56,9 @@ namespace NCEF.Controller
                 if (!browser.JavascriptObjectRepository.IsBound("craftBridge"))
                 {
                     browser.JavascriptObjectRepository.Register(
-                        "craftBridge", 
-                        _jsBridge, 
-                        isAsync: true, 
+                        "craftBridge",
+                        _jsBridge,
+                        isAsync: true,
                         options: BindingOptions.DefaultBinder
                     );
                 }
@@ -70,6 +72,7 @@ namespace NCEF.Controller
             {
                 _ = devTools.Emulation.SetDeviceMetricsOverrideAsync(width, height, deviceScaleFactor, mobile);
             }
+
             return true;
         }
 
@@ -95,6 +98,7 @@ namespace NCEF.Controller
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
             _session.AudioManager.SetVolume(vol);
         }
+
         public void SendMouseClick(int x, int y, int button, bool mouseUp)
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
@@ -106,16 +110,16 @@ namespace NCEF.Controller
 
             switch (button)
             {
-                case 0: 
-                    btnType = MouseButtonType.Left; 
+                case 0:
+                    btnType = MouseButtonType.Left;
                     flags |= CefEventFlags.LeftMouseButton;
                     break;
-                case 1: 
-                    btnType = MouseButtonType.Right; 
+                case 1:
+                    btnType = MouseButtonType.Right;
                     flags |= CefEventFlags.RightMouseButton;
                     break;
-                case 2: 
-                    btnType = MouseButtonType.Middle; 
+                case 2:
+                    btnType = MouseButtonType.Middle;
                     flags |= CefEventFlags.MiddleMouseButton;
                     break;
             }
@@ -180,10 +184,10 @@ namespace NCEF.Controller
             return browser?.GetHost();
         }
 
-        public void ResolveJsPromise(string reqId, object result) 
+        public void ResolveJsPromise(string reqId, object result)
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
-            if (_jsBridge != null) 
+            if (_jsBridge != null)
             {
                 _jsBridge.CompleteRequest(reqId, result);
             }
