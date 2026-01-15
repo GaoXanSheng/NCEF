@@ -16,7 +16,7 @@ namespace NCEF.IController
         /// <summary>
         /// 发送鼠标移动事件
         /// </summary>
-        void SendMouseMove(int x, int y, bool mouseLeave = false);
+        void SendMouseMove(int x, int y, bool mouseLeave = false, bool leftButtonPressed = false);
 
         /// <summary>
         /// 发送鼠标点击事件
@@ -49,7 +49,7 @@ namespace NCEF.IController
         /// </summary>
         /// <returns>IntPtr 句柄 或 CefSharp.Enums.CursorType 枚举的整数值</returns>
         int GetCursorType();
-        
+
         void ResolveJsPromise(string reqId, object result);
     }
 }

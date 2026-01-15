@@ -1,7 +1,6 @@
 ﻿using CefSharp;
 using NCEF.Handler;
 using NCEF.IController;
-using System;
 
 namespace NCEF.Controller
 {
@@ -74,13 +73,20 @@ namespace NCEF.Controller
             return true;
         }
 
-        public void SendMouseMove(int x, int y, bool mouseLeave = false)
+        public void SendMouseMove(int x, int y, bool mouseLeave = false, bool leftButtonPressed = false)
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
             var host = GetHost();
             if (host == null) return;
 
-            var mouseEvent = new MouseEvent(x, y, CefEventFlags.None);
+            // 关键点：如果是拖拽中，必须带上 LeftMouseButton 标志
+            CefEventFlags flags = CefEventFlags.None;
+            if (leftButtonPressed)
+            {
+                flags |= CefEventFlags.LeftMouseButton;
+            }
+
+            var mouseEvent = new MouseEvent(x, y, flags);
             host.SendMouseMoveEvent(mouseEvent, mouseLeave);
         }
 
@@ -95,15 +101,27 @@ namespace NCEF.Controller
             var host = GetHost();
             if (host == null) return;
 
-            var mouseEvent = new MouseEvent(x, y, CefEventFlags.None);
+            CefEventFlags flags = CefEventFlags.None;
             MouseButtonType btnType = MouseButtonType.Left;
 
             switch (button)
             {
-                case 0: btnType = MouseButtonType.Left; break;
-                case 1: btnType = MouseButtonType.Right; break;
-                case 2: btnType = MouseButtonType.Middle; break;
+                case 0: 
+                    btnType = MouseButtonType.Left; 
+                    flags |= CefEventFlags.LeftMouseButton;
+                    break;
+                case 1: 
+                    btnType = MouseButtonType.Right; 
+                    flags |= CefEventFlags.RightMouseButton;
+                    break;
+                case 2: 
+                    btnType = MouseButtonType.Middle; 
+                    flags |= CefEventFlags.MiddleMouseButton;
+                    break;
             }
+
+            var mouseEvent = new MouseEvent(x, y, flags);
+            // mouseUp 为 false 时是按下(Down)，为 true 时是抬起(Up)
             host.SendMouseClickEvent(mouseEvent, btnType, mouseUp, clickCount: 1);
         }
 

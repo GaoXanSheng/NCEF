@@ -41,6 +41,7 @@ namespace NCEF.Manager
                 };
                 settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
                 settings.CefCommandLineArgs.Add("enable-media-stream", "1");
+                settings.CefCommandLineArgs.Add("autoplay-policy", "no-user-gesture-required");
                 settings.EnableAudio();
             }
 
