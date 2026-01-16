@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using CefSharp.Structs;
 using NCEF.Controller;
 using NCEF.Handler;
 using NCEF.RPC;
@@ -27,11 +28,12 @@ namespace NCEF.Browser
             _controller.SetJsBridge(new JsBridgeHandler(_rpc));
         }
 
-        public async Task StartAsync()
+        public async Task StartAsync(int w, int h)
         {
             await Browser.InitializeAsync(_controller);
-            Browser.chromiumWebBrowser.Size= new Size(800, 600);
+            Browser.chromiumWebBrowser.Size = new Size(w, h);
             Browser.chromiumWebBrowser.AudioHandler = AudioHandler;
+            RenderHandler.SetViewRect(new Rect(0, 0, w, h));
             Browser.chromiumWebBrowser.RenderHandler = RenderHandler;
         }
 

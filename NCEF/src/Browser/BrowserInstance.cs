@@ -17,7 +17,6 @@ namespace NCEF.Browser
         private string InitialUrl { get; }
         private readonly string _spoutId;
         private readonly Action _onClose;
-        private RenderHandler _renderHandler;
 
         public BrowserInstance(string url, int maxFPS, string spoutId, Action onClose)
         {

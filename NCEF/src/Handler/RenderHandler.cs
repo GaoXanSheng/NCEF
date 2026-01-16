@@ -50,10 +50,16 @@ namespace NCEF.Handler
 
 
         public ScreenInfo? GetScreenInfo() => null;
+        private Rect _viewRect = new Rect(0, 0, Config.Bounds.Width, Config.Bounds.Height);
 
         public Rect GetViewRect()
         {
-            return new Rect(0, 0, Config.Bounds.Width, Config.Bounds.Height);
+            return _viewRect;
+        }
+
+        public void SetViewRect(Rect viewRect)
+        {
+            _viewRect = viewRect;
         }
 
         public bool GetScreenPoint(int vx, int vy, out int sx, out int sy)
@@ -70,8 +76,9 @@ namespace NCEF.Handler
 
             if (type == PaintElementType.Popup)
             {
-             return;   
+                return;
             }
+
             using (Texture2D cefTex = _dxDevice.OpenSharedResource1<Texture2D>(info.SharedTextureHandle))
             {
                 _spoutSender.SendTexture(cefTex.NativePointer);
