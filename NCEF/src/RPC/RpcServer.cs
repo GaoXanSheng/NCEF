@@ -19,7 +19,7 @@ namespace NCEF.RPC
         private const string PREFIX_EVT_READY = "NCEF_EVT_READY_";
         private const string PREFIX_EVT_ACK = "NCEF_EVT_ACK_";
 
-        private const int RPC_MAP_SIZE = 1024 * 1024 * 8;
+        private const int RPC_MAP_SIZE = 1024 * 1024 * 2;
         private const int EVT_MAP_SIZE = RPC_MAP_SIZE / 2;
         private const int REQ_OFFSET = 0;
         private const int RES_OFFSET = RPC_MAP_SIZE / 2;
@@ -157,13 +157,14 @@ namespace NCEF.RPC
 
                         _resEvt.Set();
                     }
+                    catch (ObjectDisposedException e)
+                    {
+                        // Thrown when disposing the server.
+                    }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"{LOG_TAG}Invoke Error: {ex.Message}");
-                    }
-                    finally
-                    {
                         _resEvt.Set();
+                        Console.WriteLine($"{LOG_TAG}Invoke Error: {ex.Message}");
                     }
                 }
             }
