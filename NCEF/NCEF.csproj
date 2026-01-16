@@ -111,22 +111,25 @@
     <ItemGroup>
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
-        <Compile Include="SpoutDX.cs" />
         <Compile Include="src\AppCore.cs" />
+        <Compile Include="src\Browser\BrowserSession.cs" />
+        <Compile Include="src\Config.cs" />
         <Compile Include="src\Controller\BrowserControllerImpl.cs" />
-        <Compile Include="src\Handler\JsBridge.cs" />
-        <Compile Include="src\Handler\JsDialogManager.cs" />
+        <Compile Include="src\Controller\IBrowserController.cs" />
+        <Compile Include="src\Controller\IMasterController.cs" />
+        <Compile Include="src\Controller\MasterControllerImpl.cs" />
+        <Compile Include="src\Handler\AudioHandler.cs" />
+        <Compile Include="src\Handler\JsBridgeHandler.cs" />
+        <Compile Include="src\Handler\JsDialogHandler.cs" />
         <Compile Include="src\Handler\LifeSpanHandler.cs" />
-        <Compile Include="src\IController\IBrowserController.cs" />
-        <Compile Include="src\IController\IMasterController.cs" />
-        <Compile Include="src\Manager\BrowserAudioManager.cs" />
-        <Compile Include="src\Manager\BrowserManager.cs" />
-        <Compile Include="src\Manager\BrowserRender.cs" />
-        <Compile Include="src\Manager\D3DChromiumWebBrowser.cs" />
-        <Compile Include="src\Manager\EnvManager.cs" />
-        <Compile Include="src\PromptForm.cs" />
-        <Compile Include="src\RenderSession.cs" />
+        <Compile Include="src\Browser\BrowserInstance.cs" />
+        <Compile Include="src\Browser\D3DChromiumWebBrowser.cs" />
+        <Compile Include="src\Handler\RenderHandler.cs" />
         <Compile Include="src\RPC\RpcServer.cs" />
+        <Compile Include="src\Utils\Env.cs" />
+        <Compile Include="src\Utils\ParentProcessHelper.cs" />
+        <Compile Include="src\Utils\SpoutDX.cs" />
+        <Compile Include="src\Utils\UserDataFolderCleanup.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="packages.config" />

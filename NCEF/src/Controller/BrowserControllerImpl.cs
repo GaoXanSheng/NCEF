@@ -1,15 +1,15 @@
 ﻿using CefSharp;
+using NCEF.Browser;
 using NCEF.Handler;
-using NCEF.IController;
 
 namespace NCEF.Controller
 {
     public class BrowserControllerImpl : IBrowserController
     {
-        private readonly RenderSession _session;
-        private JsBridge _jsBridge;
+        private readonly BrowserSession _session;
+        private JsBridgeHandler _jsBridgeHandler;
 
-        public BrowserControllerImpl(RenderSession session)
+        public BrowserControllerImpl(BrowserSession session)
         {
             _session = session;
         }
@@ -43,21 +43,21 @@ namespace NCEF.Controller
             _session.Browser.chromiumWebBrowser.GetBrowserHost().SetAudioMuted(b);
         }
 
-        public void SetJsBridge(JsBridge bridge)
+        public void SetJsBridge(JsBridgeHandler bridgeHandler)
         {
-            _jsBridge = bridge;
+            _jsBridgeHandler = bridgeHandler;
         }
 
         public void BindJsBridge()
         {
             var browser = _session.Browser?.chromiumWebBrowser;
-            if (browser != null && _jsBridge != null)
+            if (browser != null && _jsBridgeHandler != null)
             {
                 if (!browser.JavascriptObjectRepository.IsBound("craftBridge"))
                 {
                     browser.JavascriptObjectRepository.Register(
                         "craftBridge",
-                        _jsBridge,
+                        _jsBridgeHandler,
                         isAsync: true,
                         options: BindingOptions.DefaultBinder
                     );
@@ -81,8 +81,6 @@ namespace NCEF.Controller
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
             var host = GetHost();
             if (host == null) return;
-
-            // 关键点：如果是拖拽中，必须带上 LeftMouseButton 标志
             CefEventFlags flags = CefEventFlags.None;
             if (leftButtonPressed)
             {
@@ -96,7 +94,7 @@ namespace NCEF.Controller
         public void SetVolume(float vol)
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
-            _session.AudioManager.SetVolume(vol);
+            _session.AudioHandler.SetVolume(vol);
         }
 
         public void SendMouseClick(int x, int y, int button, bool mouseUp)
@@ -125,7 +123,6 @@ namespace NCEF.Controller
             }
 
             var mouseEvent = new MouseEvent(x, y, flags);
-            // mouseUp 为 false 时是按下(Down)，为 true 时是抬起(Up)
             host.SendMouseClickEvent(mouseEvent, btnType, mouseUp, clickCount: 1);
         }
 
@@ -187,9 +184,9 @@ namespace NCEF.Controller
         public void ResolveJsPromise(string reqId, object result)
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
-            if (_jsBridge != null)
+            if (_jsBridgeHandler != null)
             {
-                _jsBridge.CompleteRequest(reqId, result);
+                _jsBridgeHandler.CompleteRequest(reqId, result);
             }
         }
     }

@@ -6,51 +6,47 @@ using CefSharp.OffScreen;
 using NCEF.Controller;
 using NCEF.Handler;
 
-namespace NCEF.Manager
+namespace NCEF.Browser
 {
     #region BrowserManager
 
-    public class BrowserManager
+    public class BrowserInstance
     {
         public D3DChromiumWebBrowser chromiumWebBrowser { get; private set; }
-        public int MaxFPS { get; }
-        public string InitialUrl { get; }
+        private int MaxFps { get; }
+        private string InitialUrl { get; }
         private readonly string _spoutId;
         private readonly Action _onClose;
-        private BrowserRender _browserRender;
+        private RenderHandler _renderHandler;
 
-        public BrowserManager(string url, int maxFPS, string spoutId, Action onClose)
+        public BrowserInstance(string url, int maxFPS, string spoutId, Action onClose)
         {
             InitialUrl = url;
-            MaxFPS = maxFPS;
+            MaxFps = maxFPS;
             _spoutId = spoutId;
             _onClose = onClose;
         }
 
         public async Task InitializeAsync(BrowserControllerImpl _controller)
         {
-
-            CefSharpSettings.ConcurrentTaskExecution = true;
             if (!Cef.IsInitialized.GetValueOrDefault())
             {
                 var settings = new CefSettings
                 {
                     LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
                     WindowlessRenderingEnabled = true,
-                    
                 };
                 settings.EnableAudio();
             }
-
             var browserSettings = new BrowserSettings
             {
-                WindowlessFrameRate = MaxFPS,
+                WindowlessFrameRate = MaxFps,
             };
             string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
             chromiumWebBrowser = new D3DChromiumWebBrowser(InitialUrl, browserSettings,Path.Combine(Environment.CurrentDirectory,userDataPath))
             {
                 LifeSpanHandler = new LifeSpanHandler(_onClose),
-                JsDialogHandler = new JsDialogManager(),
+                JsDialogHandler = new JsDialogHandler(),
             };
             chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
             await chromiumWebBrowser.WaitReadyAsync();
@@ -97,6 +93,5 @@ namespace NCEF.Manager
             e.Frame.ExecuteJavaScriptAsync(script);
         }
     }
-
     #endregion
 }

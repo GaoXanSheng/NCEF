@@ -1,90 +1,44 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using CefSharp;
 using CefSharp.OffScreen;
-using NCEF.IController;
-using NCEF.Manager;
-using NCEF.RPC;
+using NCEF.Controller;
 
 namespace NCEF
 {
-    public class AppCore : IMasterController
+    public class AppCore
     {
-        private Dictionary<string, RenderSession> _sessions = new Dictionary<string, RenderSession>();
-        private RpcServer<IMasterController> _masterRpc;
+        private MasterControllerImpl _controller;
 
         public async Task InitAsync()
         {
-            int debugPort = EnvManager.GetInt("BROWSER_PORT", 9222);
-            InitGlobalCef(debugPort);
-            string masterId = EnvManager.GetString("MASTER_RPC_ID", "GLOBAL_NCEF");
-            _masterRpc = new RpcServer<IMasterController>(masterId, this);
-
-
-            var bounds = Screen.PrimaryScreen.Bounds;
-
-        #if DEBUG
-            CreateAndStartSession("https://testufo.com/", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 60).Wait();
-        #endif
-            CreateAndStartSession("about:blank", bounds.Width, bounds.Height, "NCEF_DUMMY_BROWSER", 60).Wait();
+            InitGlobalCef();
             Console.WriteLine("NCEF Master Ready.");
+            _controller = new MasterControllerImpl();
+#if DEBUG
+            _controller.CreateAndStartSession("https://testufo.com/", "NCEF_DUMMY_BROWSER", 60).Wait();
+#endif
+            // CEF preheat
+            _controller.CreateAndStartSession("about:blank", "NCEF_DUMMY_BROWSER", 1).Wait();
         }
 
-        public string CreateBrowser(string url, int w, int h, int fps)
-        {
-            string spoutName = "N_NCEF_" + Guid.NewGuid().ToString("N").Substring(0, 5);
-            if (_sessions.ContainsKey(spoutName))
-                return spoutName;
-            var session = new RenderSession(url, spoutName, fps);
-            _sessions.Add(spoutName, session);
-            session.StartAsync().Wait();
-
-            return spoutName;
-        }
-
-        public void StopBrowser(string spoutId) => StopSession(spoutId);
-        public void Shutdown() => Environment.Exit(0);
-
-        public async Task CreateAndStartSession(string url, int w, int h, string spoutName, int fps)
-        {
-            if (_sessions.ContainsKey(spoutName)) return;
-            var renderSession = new RenderSession(url, spoutName, fps);
-            await renderSession.StartAsync();
-            _sessions.Add(spoutName, renderSession);
-        }
-
-        public void StopSession(string spoutName)
-        {
-            if (_sessions.TryGetValue(spoutName, out var session))
-            {
-                session.Dispose();
-                _sessions.Remove(spoutName);
-                Console.WriteLine($"RPC Dispose: {spoutName}");
-            }
-        }
-
-        private void InitGlobalCef(int debugPort)
+        private void InitGlobalCef()
         {
             if (Cef.IsInitialized.GetValueOrDefault()) return;
-            string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
             var settings = new CefSettings
             {
-                CachePath = userDataPath,
-                LogFile = Path.Combine(Environment.CurrentDirectory, "cef.log"),
+                CachePath = Config.UserDataPath,
+                LogFile = Path.Combine(Environment.CurrentDirectory, ""),
                 WindowlessRenderingEnabled = true,
                 MultiThreadedMessageLoop = true
             };
 
-            if (debugPort != 0)
+            if (Config.DebugPort != 0)
             {
-                settings.CefCommandLineArgs.Add("remote-debugging-port", debugPort.ToString());
+                settings.CefCommandLineArgs.Add("remote-debugging-port", Config.DebugPort.ToString());
             }
 
-            settings.CefCommandLineArgs.Add("proprietary-codecs", "1");
-            settings.CefCommandLineArgs.Add("enable-media-stream", "1");
             settings.EnableAudio();
 
             if (!Cef.Initialize(settings))
@@ -95,7 +49,7 @@ namespace NCEF
 
         public void OnClosed()
         {
-            _sessions.Clear();
+            _controller.OnClosed();
             Cef.Shutdown();
         }
     }
