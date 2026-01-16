@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace NCEF.Manager
+namespace NCEF.Utils
 {
-    #region EnvManager
-    public static class EnvManager
+    public static class Env
     {
         public static string GetString(string name, string defaultValue = "")
         {
@@ -17,6 +16,5 @@ namespace NCEF.Manager
             return int.TryParse(value, out int result) ? result : defaultValue;
         }
     }
-    #endregion
 
 }

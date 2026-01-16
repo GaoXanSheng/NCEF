@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using NCEF.IController;
+using NCEF.Controller;
 using NCEF.RPC;
 
 namespace NCEF.Handler
@@ -7,20 +7,26 @@ namespace NCEF.Handler
     using System.Collections.Concurrent;
     using System.Threading.Tasks;
 
-    public class JsBridge
+    public class JsBridgeHandler
     {
         private readonly RpcServer<IBrowserController> _rpcServer;
         private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _pendingRequests 
             = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
 
-        public JsBridge(RpcServer<IBrowserController> rpcServer)
+        public JsBridgeHandler(RpcServer<IBrowserController> rpcServer)
         {
             _rpcServer = rpcServer;
         }
+        /**
+         * JAVA Void Emit(String eventName)
+         */
         public void Emit(string eventName, params object[] args)
         {
             _rpcServer.SendEvent(eventName, args);
         }
+        /**
+         * JAVA Object Call(String methodName, Object... args)
+         */
         public Task<object> Call(string methodName, params object[] args)
         {
             var tcs = new TaskCompletionSource<object>();

@@ -1,32 +1,25 @@
 ﻿using System;
-using System.Threading;
-using System.Windows.Forms;
 using CefSharp;
 using CefSharp.Enums;
 using CefSharp.OffScreen;
 using CefSharp.Structs;
+using NCEF.Utils;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using Device = SharpDX.Direct3D11.Device;
 using Device1 = SharpDX.Direct3D11.Device1;
 
-namespace NCEF.Manager
+namespace NCEF.Handler
 {
-    public class BrowserRender : IRenderHandler, IDisposable
+    public class RenderHandler : IRenderHandler, IDisposable
     {
         private Device1 _dxDevice;
         private SpoutDX _spoutSender;
         public CursorType CurrentCursor { get; private set; } = CursorType.Pointer;
-        private D3DChromiumWebBrowser _browser;
-        private Thread renderThread;
 
-        public BrowserRender(string spoutId)
+        public RenderHandler(string spoutId)
         {
             InitializeDirectX(spoutId);
-        }
-        public void setBrowser(D3DChromiumWebBrowser browser)
-        {
-            _browser = browser;
         }
 
         private void InitializeDirectX(string spoutId)
@@ -45,7 +38,6 @@ namespace NCEF.Manager
 
         public void OnPaint(PaintElementType type, Rect dirtyRect, IntPtr buffer, int width, int height)
         {
-            Console.WriteLine("SOFTWARE PAINT CALLED");
         }
 
         public void Dispose()
@@ -61,7 +53,7 @@ namespace NCEF.Manager
 
         public Rect GetViewRect()
         {
-            return new Rect(0, 0, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+            return new Rect(0, 0, Config.Bounds.Width, Config.Bounds.Height);
         }
 
         public bool GetScreenPoint(int vx, int vy, out int sx, out int sy)
@@ -75,12 +67,17 @@ namespace NCEF.Manager
         {
             if (info.SharedTextureHandle == IntPtr.Zero)
                 return;
+
+            if (type == PaintElementType.Popup)
+            {
+             return;   
+            }
             using (Texture2D cefTex = _dxDevice.OpenSharedResource1<Texture2D>(info.SharedTextureHandle))
             {
                 _spoutSender.SendTexture(cefTex.NativePointer);
             }
         }
-        
+
 
         public void OnImeCompositionRangeChanged(Range r, Rect[] b)
         {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NCEF.IController
+﻿namespace NCEF.Controller
 {
     public interface IBrowserController
     {
@@ -33,14 +31,12 @@ namespace NCEF.IController
         void SendMouseWheel(int x, int y, int deltaX, int deltaY);
 
         /// <summary>
-        /// 发送键盘按键事件 (用于非字符按键，如 Enter, Backspace, 方向键)
+        /// 发送键盘按键事件
         /// </summary>
-        /// <param name="windowsKeyCode">Windows 虚拟键码 (例如 13 是 Enter)</param>
-        /// <param name="isUp">true为抬起，false为按下</param>
         void SendKeyEvent(int windowsKeyCode, bool isUp);
 
         /// <summary>
-        /// 发送文本输入 (用于打字)
+        /// 发送文本输入
         /// </summary>
         void SendText(string text);
 

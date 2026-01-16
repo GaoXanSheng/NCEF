@@ -160,6 +160,9 @@ namespace NCEF.RPC
                     catch (Exception ex)
                     {
                         Console.WriteLine($"{LOG_TAG}Invoke Error: {ex.Message}");
+                    }
+                    finally
+                    {
                         _resEvt.Set();
                     }
                 }

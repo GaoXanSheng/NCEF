@@ -1,6 +1,6 @@
 ﻿using SpoutDXWrapper;
 
-namespace NCEF
+namespace NCEF.Utils
 {
     public class SpoutDX :SpoutSender
     {

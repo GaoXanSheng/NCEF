@@ -1,14 +1,14 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using CefSharp;
 using CefSharp.Enums;
 using CefSharp.Structs;
-using NAudio.Wave;
-using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
+using NAudio.Wave;
 
-namespace NCEF.Manager
+namespace NCEF.Handler
 {
-    public class BrowserAudioManager : IAudioHandler, IDisposable
+    public class AudioHandler : IAudioHandler, IDisposable
     {
         private BufferedWaveProvider _waveProvider;
         private WasapiOut _waveOut; 
@@ -19,7 +19,7 @@ namespace NCEF.Manager
         private float[] _interleavedBuffer = new float[0];
         private byte[] _byteBuffer = new byte[0];
 
-        public BrowserAudioManager()
+        public AudioHandler()
         {
             
         }

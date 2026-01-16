@@ -1,12 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using CefSharp;
 using CefSharp.OffScreen;
 using NCEF.Controller;
-using NCEF.Handler;
 
-namespace NCEF.Manager
+namespace NCEF.Browser
 {
     public class D3DChromiumWebBrowser : ChromiumWebBrowser
     {

@@ -1,40 +1,37 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using NCEF.Controller;
 using NCEF.Handler;
-using NCEF.IController;
-using NCEF.Manager;
 using NCEF.RPC;
 using Size = System.Drawing.Size;
 
-namespace NCEF
+namespace NCEF.Browser
 {
-    public class RenderSession : IDisposable
+    public class BrowserSession : IDisposable
     {
-        public BrowserManager Browser { get; private set; }
-        public BrowserRender RenderHandler { get; private set; }
+        public BrowserInstance Browser { get; private set; }
+        public RenderHandler RenderHandler { get; private set; }
         public string SpoutId { get; private set; }
-        public BrowserAudioManager AudioManager { get; private set; }
+        public AudioHandler AudioHandler { get; private set; }
         private RpcServer<IBrowserController> _rpc;
         private BrowserControllerImpl _controller;
 
-        public RenderSession(string url, string spoutId, int maxFps)
+        public BrowserSession(string url, string spoutId, int maxFps)
         {
             SpoutId = spoutId;
-            Browser = new BrowserManager(url, maxFps, spoutId, Dispose);
-            RenderHandler = new BrowserRender(spoutId);
-            AudioManager = new BrowserAudioManager();
+            Browser = new BrowserInstance(url, maxFps, spoutId, Dispose);
+            RenderHandler = new RenderHandler(spoutId);
+            AudioHandler = new AudioHandler();
             _controller = new BrowserControllerImpl(this);
             _rpc = new RpcServer<IBrowserController>(spoutId, _controller);
-            _controller.SetJsBridge(new JsBridge(_rpc));
+            _controller.SetJsBridge(new JsBridgeHandler(_rpc));
         }
 
         public async Task StartAsync()
         {
             await Browser.InitializeAsync(_controller);
             Browser.chromiumWebBrowser.Size= new Size(800, 600);
-            Browser.chromiumWebBrowser.AudioHandler = AudioManager;
+            Browser.chromiumWebBrowser.AudioHandler = AudioHandler;
             Browser.chromiumWebBrowser.RenderHandler = RenderHandler;
         }
 
