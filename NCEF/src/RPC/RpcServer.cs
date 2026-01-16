@@ -157,13 +157,13 @@ namespace NCEF.RPC
 
                         _resEvt.Set();
                     }
-                    catch (ObjectDisposedException e)
-                    {
-                        // Likely shutting down
-                    }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"{LOG_TAG}Invoke Error: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _resEvt.Set();
                     }
                 }
             }
