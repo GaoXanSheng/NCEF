@@ -9,6 +9,7 @@
         bool Resize(int width, int height, int deviceScaleFactor, bool mobile);
         void SetAudioMuted(bool b);
         void SetVolume(float vol);
+        void ShowDevTools();
         // --- 新增功能 ---
 
         /// <summary>

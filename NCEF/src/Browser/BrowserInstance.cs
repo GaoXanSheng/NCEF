@@ -42,14 +42,16 @@ namespace NCEF.Browser
                 WindowlessFrameRate = MaxFps,
             };
             string userDataPath = Path.Combine(Environment.CurrentDirectory, "User Data");
+            CefSharpSettings.ConcurrentTaskExecution = true;
             chromiumWebBrowser = new D3DChromiumWebBrowser(InitialUrl, browserSettings,Path.Combine(Environment.CurrentDirectory,userDataPath))
             {
                 LifeSpanHandler = new LifeSpanHandler(_onClose),
                 JsDialogHandler = new JsDialogHandler(),
             };
+            _controller.BindJsBridge();
             chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
             await chromiumWebBrowser.WaitReadyAsync();
-            _controller.BindJsBridge();
+
         }
 
 

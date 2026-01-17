@@ -167,7 +167,11 @@ namespace NCEF.Controller
                 host.SendKeyEvent(keyEvent);
             }
         }
-
+        public void ShowDevTools()
+        {
+            if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return;
+            _session.Browser.chromiumWebBrowser.ShowDevTools();
+        }
         public int GetCursorType()
         {
             if (!_session.Browser.chromiumWebBrowser.IsBrowserInitialized) return 0;
