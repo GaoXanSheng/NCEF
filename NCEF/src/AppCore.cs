@@ -22,7 +22,27 @@ namespace NCEF
             // CEF preheat
             _controller.CreateAndStartSession("about:blank", "NCEF_DUMMY_BROWSER", 1).Wait();
         }
+        private void ApplyExtraCommandLineArgs(CefSettings settings)
+        {
+            string cliString = Config.CefCommandLineArgs; 
+            if (string.IsNullOrWhiteSpace(cliString)) return;
+            var args = cliString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
+            foreach (var arg in args)
+            {
+                string cleanArg = arg.TrimStart('-');
+                if (string.IsNullOrEmpty(cleanArg)) continue;
+                if (cleanArg.Contains("="))
+                {
+                    var parts = cleanArg.Split(new[] { '=' }, 2);
+                    settings.CefCommandLineArgs.Add(parts[0], parts[1]);
+                }
+                else
+                {
+                    settings.CefCommandLineArgs.Add(cleanArg, "1");
+                }
+            }
+        }
         private void InitGlobalCef()
         {
             if (Cef.IsInitialized.GetValueOrDefault()) return;
@@ -38,13 +58,15 @@ namespace NCEF
             {
                 settings.CefCommandLineArgs.Add("remote-debugging-port", Config.DebugPort.ToString());
             }
-
+            ApplyExtraCommandLineArgs(settings);
             settings.EnableAudio();
 
             if (!Cef.Initialize(settings))
             {
                 throw new Exception("CefSharp initialization failed!");
             }
+
+
         }
 
         public void OnClosed()
