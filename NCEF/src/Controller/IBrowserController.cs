@@ -34,7 +34,7 @@
         /// <summary>
         /// 发送键盘按键事件
         /// </summary>
-        void SendKeyEvent(int windowsKeyCode, bool isUp);
+        void SendKeyEvent(int windowsKeyCode, bool isUp,int modifiers);
 
         /// <summary>
         /// 发送文本输入
