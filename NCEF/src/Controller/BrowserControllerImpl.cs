@@ -145,20 +145,12 @@ namespace NCEF.Controller
             var keyEvent = new KeyEvent();
             keyEvent.WindowsKeyCode = windowsKeyCode;
             keyEvent.Type = isUp ? KeyEventType.KeyUp : KeyEventType.RawKeyDown;
-
-            // ======== 核心修复：解析从 Java 传过来的 modifiers ========
             CefEventFlags cefModifiers = CefEventFlags.None;
-    
-            // 按位与运算(&)判断是否包含对应的按键
-            if ((modifiers & 1) != 0) cefModifiers |= CefEventFlags.ShiftDown;   // 1对应 GLFW_MOD_SHIFT
-            if ((modifiers & 2) != 0) cefModifiers |= CefEventFlags.ControlDown; // 2对应 GLFW_MOD_CONTROL
-            if ((modifiers & 4) != 0) cefModifiers |= CefEventFlags.AltDown;     // 4对应 GLFW_MOD_ALT
-            if ((modifiers & 8) != 0) cefModifiers |= CefEventFlags.CommandDown; // 8对应 GLFW_MOD_SUPER (Win键/Mac的Command键)
-
-            // 将解析好的状态赋给 CEF
+            if ((modifiers & 1) != 0) cefModifiers |= CefEventFlags.ShiftDown;   // 1 GLFW_MOD_SHIFT
+            if ((modifiers & 2) != 0) cefModifiers |= CefEventFlags.ControlDown; // 2 GLFW_MOD_CONTROL
+            if ((modifiers & 4) != 0) cefModifiers |= CefEventFlags.AltDown;     // 4 GLFW_MOD_ALT
+            if ((modifiers & 8) != 0) cefModifiers |= CefEventFlags.CommandDown; // 8 GLFW_MOD_SUPER
             keyEvent.Modifiers = cefModifiers;
-            // ============================================================
-
             keyEvent.IsSystemKey = false;
 
             host.SendKeyEvent(keyEvent);

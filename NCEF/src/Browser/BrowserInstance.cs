@@ -49,7 +49,7 @@ namespace NCEF.Browser
                 JsDialogHandler = new JsDialogHandler(),
             };
             _controller.BindJsBridge();
-            chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
+            // chromiumWebBrowser.FrameLoadEnd += OnFrameLoadEnd;
             await chromiumWebBrowser.WaitReadyAsync();
 
         }
