@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minecraft RPC Widget</title>
+    <style>
+        /* 关键：整体背景透明 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: transparent; 
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+
+        /* 小窗口容器 */
+        .widget {
+            width: 300px;
+            background: rgba(30, 30, 30, 0.85); /* 半透明深色背景 */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px); /* 背景模糊感（需CEF支持） */
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            color: #efefef;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            padding: 10px 15px;
+            background: rgba(76, 175, 80, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px 10px 0 0;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #f44747; /* 默认未连接红色 */
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-online { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
+
+        .content { padding: 12px; }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 8px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* 紧凑型按钮 */
+        button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: rgba(14, 99, 156, 0.8);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) { background: #1177bb; transform: translateX(2px); }
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button.action { background: rgba(216, 160, 52, 0.8); color: #000; }
+
+        /* 小窗口控制台 */
+        #console {
+            height: 120px;
+            padding: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+            overflow-y: auto;
+            color: #aaa;
+            scrollbar-width: thin;
+        }
+
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .dir-send { color: #569cd6; }
+        .dir-recv { color: #ce9178; }
+        .dir-err { color: #f44747; }
+    </style>
+</head>
+<body>
+
+<div class="widget">
+    <div class="header">
+        <span>CRAFT BROWSER DEBUG</span>
+        <span id="statusIcon" class="status-dot"></span>
+    </div>
+
+    <div class="content">
+        <div class="section-title">Quick Actions</div>
+        <button id="btnChat" onclick="sendChat()" disabled>💬 Send Chat Message</button>
+        <button id="btnTp" class="action" onclick="tpPlayer()" disabled>🚀 Teleport Up (+5)</button>
+
+        <div class="section-title">Data Fetch</div>
+        <button id="btnCalc" onclick="doCalculation()" disabled>🧮 Remote Add (123+456)</button>
+        <button id="btnInfo" onclick="getPlayerInfo()" disabled>👤 Get Player Stats</button>
+    </div>
+
+    <div id="console"></div>
+</div>
+
+<script>
+    let bridge = null;
+
+    function log(direction, msg) {
+        const consoleDiv = document.getElementById('console');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        
+        let dirClass = '';
+        if (direction === '>>>') dirClass = 'dir-send';
+        if (direction === '<<<') dirClass = 'dir-recv';
+        if (direction === 'ERR') dirClass = 'dir-err';
+
+        const text = typeof msg === 'object' ? JSON.stringify(msg) : msg;
+        entry.innerHTML = `<span class="${dirClass}">${direction}</span> ${text}`;
+        
+        consoleDiv.appendChild(entry);
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    window.addEventListener('load', async () => {
+        try {
+            log('SYS', 'Linking bridge...');
+            await CefSharp.BindObjectAsync("craftBridge");
+            bridge = window.craftBridge;
+
+            if (bridge) {
+                log('SYS', 'Connected!');
+                document.getElementById('statusIcon').classList.add('status-online');
+                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+            }
+        } catch (e) {
+            log('ERR', 'Fail: ' + e);
+        }
+    });
+
+    async function sendChat() {
+        if (!bridge) return;
+        const msg = "Web Command: " + Math.floor(Math.random() * 100);
+        log('>>>', `chat: ${msg}`);
+        await bridge.emit("sendChat", msg);
+    }
+
+    async function tpPlayer() {
+        if (!bridge) return;
+        log('>>>', 'tpUp');
+        await bridge.emit("tpUp");
+    }
+
+    async function doCalculation() {
+        if (!bridge) return;
+        log('>>>', 'add(123, 456)');
+        try {
+            const res = await bridge.call("add", 123, 456);
+            log('<<<', `res: ${res}`);
+        } catch (e) { log('ERR', e); }
+    }
+
+    async function getPlayerInfo() {
+        if (!bridge) return;
+        log('>>>', 'getInfo');
+        try {
+            const info = await bridge.call("getPlayerInfo");
+            log('<<<', `Player: ${info}`);
+        } catch (e) { log('ERR', e); }
+    }
+</script>
+</body>
+</html>

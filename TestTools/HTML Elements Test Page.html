@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate HTML5 & CSS3 Test Suite</title>
+    
+    <!-- External CSS Test (Example) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* CSS VARIABLES (Custom Properties) */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --text-color: #2c3e50;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* RESET & BASE STYLES */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex; /* Flexbox Layout */
+        }
+
+        /* LAYOUT COMPONENTS */
+        aside {
+            width: 250px;
+            background: #fff;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+
+        main {
+            flex: 1;
+            padding: 40px;
+            max-width: 1000px;
+        }
+
+        section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        /* CSS GRID TEST */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .grid-item {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        /* FLEXBOX TEST */
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #eee;
+            padding: 10px;
+        }
+
+        /* TYPOGRAPHY CSS */
+        h1, h2, h3 { color: var(--primary-color); }
+        .text-gradient {
+            background: linear-gradient(to right, #30cfd0 0%, #330867 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 3rem;
+        }
+
+        /* BOX MODEL & BORDERS */
+        .box-test {
+            width: 100%;
+            padding: 20px;
+            border: 5px dashed var(--accent-color);
+            margin: 20px 0;
+            outline: 3px solid gold;
+            outline-offset: 5px;
+        }
+
+        /* CSS ANIMATION */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .animate-me {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--secondary-color);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        /* FILTERS & TRANSFORMS */
+        .filter-img {
+            filter: grayscale(100%) blur(2px);
+            transition: 0.5s;
+            width: 200px;
+        }
+        .filter-img:hover {
+            filter: grayscale(0%) blur(0);
+            transform: rotate(5deg) scale(1.1);
+        }
+
+        /* FORM STYLING */
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input:focus { border-color: var(--primary-color); outline: none; }
+
+        /* TABLE STYLING */
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+
+        /* PSEUDO-ELEMENTS */
+        .quote::before { content: "“"; font-size: 2em; color: #ccc; }
+        .quote::after { content: "”"; font-size: 2em; color: #ccc; }
+
+        /* MODERN CSS: GLASSMORPHISM */
+        .glass {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <h3>Navigation</h3>
+        <nav>
+            <ul style="list-style: none; padding: 0;">
+                <li><a href="#text">Text Elements</a></li>
+                <li><a href="#grouping">Grouping & Lists</a></li>
+                <li><a href="#forms">Forms & Inputs</a></li>
+                <li><a href="#media">Media & Embedded</a></li>
+                <li><a href="#table">Tabular Data</a></li>
+                <li><a href="#interactive">Interactive Elements</a></li>
+                <li><a href="#css-features">Special CSS Tests</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main>
+        <header>
+            <h1 class="text-gradient">HTML5 & CSS3 Kitchen Sink</h1>
+            <p>A comprehensive page to test every single tag and common CSS property.</p>
+        </header>
+
+        <hr>
+
+        <!-- 1. TEXT SEMANTICS -->
+        <section id="text">
+            <h2>1. Text Semantics</h2>
+            <p>This is a <strong>strong</strong> paragraph with <em>emphasis</em> and <b>bold</b> or <i>italic</i> tags.</p>
+            <p>Testing <small>small text</small>, <mark>marked text</mark>, <u>underlined</u>, <s>strikethrough</s>, and <abbr title="Abbreviation">abbr</abbr>.</p>
+            <p>Chemical formula: H<sub>2</sub>O. Math formula: E = mc<sup>2</sup>.</p>
+            <p>Code snippets: <code>const x = 10;</code> and keyboard inputs: <kbd>Ctrl</kbd> + <kbd>S</kbd>.</p>
+            <p>Quotes: <q>This is an inline quote.</q> and a cite: <cite>— The Internet</cite>.</p>
+            <p>Time element: <time datetime="2023-12-25">Christmas Day 2023</time>.</p>
+            <p>Bi-Directional Override: <bdo dir="rtl">This text will go from right to left</bdo>.</p>
+            <p>Ruby Annotations: <ruby>漢 <rt>かん</rt> 字 <rt>じ</rt></ruby></p>
+        </section>
+
+        <!-- 2. GROUPING & LISTS -->
+        <section id="grouping">
+            <h2>2. Grouping Content</h2>
+            <div class="flex-container">
+                <div>Flex Item 1</div>
+                <div>Flex Item 2</div>
+                <div>Flex Item 3</div>
+            </div>
+
+            <blockquote>
+                This is a blockquote. It's used for longer citations.
+            </blockquote>
+
+            <h3>Lists</h3>
+            <ul>
+                <li>Unordered List Item</li>
+                <li>Another Item
+                    <ul>
+                        <li>Nested Item</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <ol>
+                <li>Ordered List Item 1</li>
+                <li>Ordered List Item 2</li>
+            </ol>
+
+            <dl>
+                <dt>Term</dt>
+                <dd>Definition of the term.</dd>
+                <dt>HTML</dt>
+                <dd>HyperText Markup Language.</dd>
+            </dl>
+
+            <figure>
+                <div style="background: #ddd; height: 100px; width: 200px; display: flex; align-items: center; justify-content: center;">Placeholder</div>
+                <figcaption>Fig 1. A figure caption testing the figure tag.</figcaption>
+            </figure>
+        </section>
+
+        <!-- 3. FORMS & INPUTS (EVERY TYPE) -->
+        <section id="forms">
+            <h2>3. Forms & Inputs</h2>
+            <form>
+                <fieldset>
+                    <legend>All Input Types</legend>
+                    <label>Text: <input type="text" placeholder="Text input"></label>
+                    <label>Search: <input type="search" placeholder="Search..."></label>
+                    <label>Email: <input type="email" placeholder="email@example.com"></label>
+                    <label>Password: <input type="password" value="password"></label>
+                    <label>Number: <input type="number" min="0" max="100" value="42"></label>
+                    <label>Range: <input type="range"></label>
+                    <label>Color: <input type="color"></label>
+                    <label>Date: <input type="date"></label>
+                    <label>Month: <input type="month"></label>
+                    <label>Week: <input type="week"></label>
+                    <label>Time: <input type="time"></label>
+                    <label>Local DateTime: <input type="datetime-local"></label>
+                    <label>Tel: <input type="tel"></label>
+                    <label>URL: <input type="url"></label>
+                    <label>File: <input type="file"></label>
+                    
+                    <hr>
+                    
+                    <label><input type="checkbox"> Checkbox</label>
+                    <label><input type="radio" name="r"> Radio A</label>
+                    <label><input type="radio" name="r"> Radio B</label>
+
+                    <hr>
+
+                    <label for="browser">Datalist (Type 'C'):</label>
+                    <input list="browsers" id="browser">
+                    <datalist id="browsers">
+                        <option value="Chrome">
+                        <option value="Firefox">
+                        <option value="Safari">
+                        <option value="Edge">
+                    </datalist>
+
+                    <label>Select:
+                        <select>
+                            <optgroup label="Frontend">
+                                <option>HTML</option>
+                                <option>CSS</option>
+                            </optgroup>
+                            <optgroup label="Backend">
+                                <option>Node.js</option>
+                                <option>Python</option>
+                            </optgroup>
+                        </select>
+                    </label>
+
+                    <label>Textarea: <textarea rows="3"></textarea></label>
+                    
+                    <button type="submit">Submit</button>
+                    <button type="reset">Reset</button>
+                    <button type="button">Button</button>
+                    <input type="image" src="https://via.placeholder.com/50x20" alt="Submit Image">
+                </fieldset>
+            </form>
+        </section>
+
+        <!-- 4. MEDIA & EMBEDDED -->
+        <section id="media">
+            <h2>4. Media & Embedded</h2>
+            <h3>SVG Image</h3>
+            <svg width="100" height="100">
+                <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+            </svg>
+
+            <h3>Canvas</h3>
+            <canvas id="myCanvas" width="200" height="50" style="border:1px solid #000;"></canvas>
+            <script>
+                var c = document.getElementById("myCanvas");
+                var ctx = c.getContext("2d");
+                ctx.moveTo(0,0); ctx.lineTo(200,50); ctx.stroke();
+            </script>
+
+            <h3>Video & Audio (Placeholders)</h3>
+            <video controls width="100%"><source src="" type="video/mp4"></video>
+            <audio controls src=""></audio>
+
+            <h3>Iframe</h3>
+            <iframe src="about:blank" style="width:100%; height:100px; border:1px solid #ccc;"></iframe>
+        </section>
+
+        <!-- 5. TABLE -->
+        <section id="table">
+            <h2>5. Tabular Data</h2>
+            <table>
+                <caption>Monthly Employee Performance</caption>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>001</td>
+                        <td>Alice</td>
+                        <td>Designer</td>
+                        <td><meter value="0.9">90%</meter></td>
+                    </tr>
+                    <tr>
+                        <td>002</td>
+                        <td>Bob</td>
+                        <td>Developer</td>
+                        <td><meter value="0.6" low="0.3" high="0.8" optimum="1.0">60%</meter></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3">Total Employees</td>
+                        <td>2</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </section>
+
+        <!-- 6. INTERACTIVE -->
+        <section id="interactive">
+            <h2>6. Interactive Elements</h2>
+            <details>
+                <summary>Click to Expand (Details/Summary)</summary>
+                <p>Hidden content revealed!</p>
+            </details>
+
+            <p>Progress Bar: <progress value="45" max="100"></progress></p>
+            
+            <button onclick="document.getElementById('myDialog').showModal()">Open Dialog Modal</button>
+            <dialog id="myDialog">
+                <p>This is a native HTML dialog box.</p>
+                <button onclick="document.getElementById('myDialog').close()">Close</button>
+            </dialog>
+        </section>
+
+        <!-- 7. CSS SPECIFIC TESTS -->
+        <section id="css-features">
+            <h2>7. Advanced CSS Tests</h2>
+            
+            <h3>Grid Layout</h3>
+            <div class="grid-container">
+                <div class="grid-item">1</div>
+                <div class="grid-item">2</div>
+                <div class="grid-item">3</div>
+                <div class="grid-item">4</div>
+            </div>
+
+            <h3>Box Model & Outline</h3>
+            <div class="box-test">This box tests Padding, Margin, Border, and Outline-Offset.</div>
+
+            <h3>Transitions & Transforms</h3>
+            <img src="https://via.placeholder.com/300" alt="Test" class="filter-img">
+            <p>Hover over the image to see rotation and filter effects.</p>
+
+            <h3>Animations</h3>
+            <div class="animate-me">I am Pulsing!</div>
+
+            <h3>Glassmorphism (Modern CSS)</h3>
+            <div style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926'); padding: 50px; background-size: cover;">
+                <div class="glass">
+                    <h4>Glass Card</h4>
+                    <p>Testing backdrop-filter and transparency.</p>
+                </div>
+            </div>
+
+            <h3>Columns</h3>
+            <div style="column-count: 3; column-gap: 20px;">
+                This text is split into multiple columns using the CSS column-count property. It flows automatically from one column to the next, just like in a newspaper or magazine layout.
+            </div>
+        </section>
+
+        <footer style="text-align: center; margin-top: 50px; padding: 20px; border-top: 1px solid #ccc;">
+            <p>&copy; 2026 HTML/CSS Test</p>
+        </footer>
+    </main>
+
+</body>
+</html>

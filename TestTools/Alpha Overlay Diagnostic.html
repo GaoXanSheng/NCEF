@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Alpha & Blending Stress Test</title>
+
+<style>
+/* ===============================
+   基础：强制透明底色
+   =============================== */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent !important;
+    overflow-y: auto;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: white;
+}
+
+/* 诊断容器 */
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* 卡片样式 */
+.test-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    margin-bottom: 5px;
+}
+
+/* ===============================
+   1. 层叠透明度测试 (Stacking Alpha)
+   用来检查：多次叠加后 alpha 是否变黑
+   =============================== */
+.stack-container {
+    position: relative;
+    height: 120px;
+}
+.stack-box {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.stack-1 { background: rgba(255, 0, 0, 0.4); left: 0; top: 0; }
+.stack-2 { background: rgba(0, 255, 0, 0.4); left: 40px; top: 10px; }
+.stack-3 { background: rgba(0, 0, 255, 0.4); left: 80px; top: 20px; }
+
+/* ===============================
+   2. 极细线条与边框测试 (Thin Lines)
+   用来检查：AA（抗锯齿）是否产生黑边
+   =============================== */
+.line-test {
+    width: 100%;
+    height: 2px;
+    background: white;
+    margin-bottom: 4px;
+}
+.outline-test {
+    width: 100%;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-sizing: border-box;
+}
+
+/* ===============================
+   3. 复杂渐变测试 (Gradient Stress)
+   用来检查：从透明到不透明的过渡是否发灰
+   =============================== */
+.gradient-bar {
+    height: 40px;
+    width: 100%;
+    border-radius: 4px;
+}
+.grad-white { background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1)); }
+.grad-red { background: linear-gradient(to right, rgba(255,0,0,0), rgba(255,0,0,1)); }
+.grad-rainbow { background: linear-gradient(to right, transparent, red, yellow, lime, cyan, blue, magenta, transparent); }
+
+/* ===============================
+   4. 背景滤镜测试 (Backdrop Filter)
+   最易出 Bug：检查模糊后的边缘是否漏色
+   =============================== */
+.blur-box {
+    width: 100%;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+/* ===============================
+   5. 字体抗锯齿深挖 (Font Rendering)
+   =============================== */
+.font-giant { font-size: 60px; font-weight: 900; line-height: 1; }
+.font-small { font-size: 10px; opacity: 0.7; }
+.stroke-text {
+    -webkit-text-stroke: 1px rgba(255,255,255,0.8);
+    color: transparent;
+}
+
+/* ===============================
+   6. 混合模式测试 (Blend Modes)
+   =============================== */
+.mix-box {
+    width: 50px;
+    height: 50px;
+    background: #00ff00;
+    mix-blend-mode: screen;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- 测试 1: 基础透明度颜色 -->
+    <div class="test-card">
+        <div class="label">01. RGBA Solid & Alpha</div>
+        <div style="display: flex; gap: 10px;">
+            <div style="width:50px; height:50px; background: rgba(255,255,255,1);"></div>
+            <div style="width:50px; height:50px; background: rgba(255,255,255,0.5);"></div>
+            <div style="width:50px; height:50px; background: rgba(255,255,255,0.2);"></div>
+            <div style="width:50px; height:50px; background: rgba(255,255,255,0.05);"></div>
+        </div>
+        <div style="font-size: 12px;">从左到右: 100%, 50%, 20%, 5% White</div>
+    </div>
+
+    <!-- 测试 2: 层叠色块 (检查 Premultiplied Alpha) -->
+    <div class="test-card">
+        <div class="label">02. Layer Stacking (Multi-Alpha)</div>
+        <div class="stack-container">
+            <div class="stack-box stack-1"></div>
+            <div class="stack-box stack-2"></div>
+            <div class="stack-box stack-3"></div>
+        </div>
+        <div style="font-size: 12px;">重叠部分不应出现黑色阴影或脏色。</div>
+    </div>
+
+    <!-- 测试 3: 渐变应力 -->
+    <div class="test-card">
+        <div class="label">03. Alpha Gradients (Transition)</div>
+        <div class="gradient-bar grad-white"></div>
+        <div class="gradient-bar grad-red"></div>
+        <div class="gradient-bar grad-rainbow"></div>
+        <div style="font-size: 12px;">检查左侧(0 alpha)是否发灰。如果发灰，说明渲染器在插值前未进行预乘处理。</div>
+    </div>
+
+    <!-- 测试 4: 字体边缘 -->
+    <div class="test-card">
+        <div class="label">04. Glyph Anti-Aliasing</div>
+        <div class="font-giant">A g y @</div>
+        <div class="stroke-text font-giant">OUTLINE</div>
+        <div class="font-small">THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG</div>
+        <div style="font-size: 12px;">高倍缩放观察字符边缘：不应有 1px 的黑边或白边。</div>
+    </div>
+
+    <!-- 测试 5: 滤镜与模糊 (最严苛测试) -->
+    <div class="test-card">
+        <div class="label">05. Backdrop Filter (Glassmorphism)</div>
+        <div style="background: linear-gradient(45deg, #f06, #3cf); padding: 10px; border-radius: 8px;">
+            <div class="blur-box">BLUR OVER GRADIENT</div>
+        </div>
+        <div class="blur-box" style="margin-top:10px;">BLUR OVER TRANSPARENT</div>
+        <div style="font-size: 12px;">检查模糊块边缘是否变暗。</div>
+    </div>
+
+    <!-- 测试 6: 极细线条 -->
+    <div class="test-card">
+        <div class="label">06. Sub-pixel Lines & Borders</div>
+        <div class="line-test" style="opacity: 1;"></div>
+        <div class="line-test" style="opacity: 0.5;"></div>
+        <div class="line-test" style="opacity: 0.2;"></div>
+        <div class="outline-test"></div>
+        <div style="font-size: 12px;">检查 1px 线条在透明背景下的对比度。</div>
+    </div>
+
+    <!-- 测试 7: 混合模式 -->
+    <div class="test-card">
+        <div class="label">07. Mix Blend Mode</div>
+        <div style="display:flex; gap:10px; background: rgba(255,0,0,0.5); padding:10px;">
+            <div class="mix-box" style="mix-blend-mode: difference;">DIFF</div>
+            <div class="mix-box" style="mix-blend-mode: overlay;">OVER</div>
+            <div class="mix-box" style="mix-blend-mode: screen;">SCR</div>
+        </div>
+        <div style="font-size: 12px;">CSS 混合模式在透明通道下的表现。</div>
+    </div>
+
+</div>
+
+<!-- 参考十字线 -->
+<div style="position:fixed; top:50%; left:0; width:100%; height:1px; background:rgba(255,255,255,0.1); pointer-events:none;"></div>
+<div style="position:fixed; left:50%; top:0; width:1px; height:100%; background:rgba(255,255,255,0.1); pointer-events:none;"></div>
+
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Click to display the red dot</title>
+  <style>
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background:#000;
+      cursor:crosshair;
+      overflow:hidden;
+      position:relative;
+      -webkit-user-select:none;user-select:none;
+    }
+
+    .click-dot{
+      position:absolute;
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      background:#ff3b30; /* 红色 */
+      pointer-events:none; /* 点不会阻挡后续点击 */
+      transform:translate(-50%, -50%) scale(0.6);
+      opacity:1;
+      transition:transform 200ms ease, opacity 500ms ease;
+      box-shadow:0 0 6px rgba(255,59,48,0.9);
+    }
+
+
+    .click-dot.fade-out{
+      transform:translate(-50%, -50%) scale(1.6);
+      opacity:0;
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  document.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    const dot = document.createElement('div');
+    dot.className = 'click-dot';
+    const x = e.pageX;
+    const y = e.pageY;
+
+    dot.style.left = x + 'px';
+    dot.style.top = y + 'px';
+
+    document.body.appendChild(dot);
+
+    requestAnimationFrame(() => {
+      dot.style.transform = 'translate(-50%, -50%) scale(1)';
+    });
+
+    const visibleMs = 5000;
+    setTimeout(() => {
+      dot.classList.add('fade-out');
+      const removeAfter = 600; // ms
+      setTimeout(() => dot.remove(), removeAfter);
+    }, visibleMs);
+  });
+  document.addEventListener('touchstart', function (e) {
+    const t = e.touches[0];
+    if (!t) return;
+    const simulated = new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      button: 0,
+      clientX: t.clientX,
+      clientY: t.clientY,
+      screenX: t.screenX,
+      screenY: t.screenY,
+      pageX: t.pageX,
+      pageY: t.pageY
+    });
+    e.target.dispatchEvent(simulated);
+  }, {passive:true});
+</script>
+
+</body>
+</html>
