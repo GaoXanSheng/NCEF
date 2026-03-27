@@ -2,4 +2,7 @@ bin/
 obj/
 /packages/
 riderModule.iml
-/_ReSharper.Caches/
+/_ReSharper.Caches/!/packages/
+!/NCEF.sln.DotSettings.user
+!/NCEF-Test/bin/
+!/SpoutDXWrapper/build/
