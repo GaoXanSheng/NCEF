@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCEF", "NCEF\NCEF.csproj", "{9EF1BBF5-85D8-41D7-BB53-14742208A0B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NCEF-Test", "NCEF-Test\NCEF-Test.csproj", "{7DFF6172-F2A0-4575-9EB2-031026632370}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,5 +18,13 @@ Global
 		{9EF1BBF5-85D8-41D7-BB53-14742208A0B7}.Debug|Any CPU.Build.0 = Debug|X64
 		{9EF1BBF5-85D8-41D7-BB53-14742208A0B7}.Debug|X64.ActiveCfg = Debug|X64
 		{9EF1BBF5-85D8-41D7-BB53-14742208A0B7}.Debug|X64.Build.0 = Debug|X64
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Debug|X64.ActiveCfg = Debug|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Debug|X64.Build.0 = Debug|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Release|X64.ActiveCfg = Release|Any CPU
+		{7DFF6172-F2A0-4575-9EB2-031026632370}.Release|X64.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

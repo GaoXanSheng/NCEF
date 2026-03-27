@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <RootNamespace>NCEF_Test</RootNamespace>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\NCEF\NCEF.csproj">
+            <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+            <Private>false</Private>
+        </ProjectReference>
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="SpoutDXWrapper">
+            <HintPath>../NCEF/SpoutDXWrapper.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4"/>
+        <PackageReference Include="SharpDX" Version="4.2.0"/>
+        <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0"/>
+        <PackageReference Include="SharpDX.DXGI" Version="4.2.0"/>
+    </ItemGroup>
+
+</Project>

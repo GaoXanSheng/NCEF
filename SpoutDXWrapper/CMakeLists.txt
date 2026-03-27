@@ -3,19 +3,15 @@ project(SpoutDXWrapper LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 if(MSVC)
     string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     string(REPLACE "/RTC1" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /clr")
 endif()
-
-# 源文件
 set(SOURCES
         SpoutDXWrapper.cpp
 )
 
-# 头文件
 set(HEADERS
         SpoutDXWrapper.h
         Spout/SpoutDX.h
@@ -39,12 +35,15 @@ message(STATUS "D3D11_LIB=${D3D11_LIB}")
 message(STATUS "DXGI_LIB=${DXGI_LIB}")
 
 set(SPOUTDX_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Spout/libs/SpoutDX.lib")
+set(SPOUT_LIB "${CMAKE_CURRENT_SOURCE_DIR}/Spout/libs/Spout.lib")
 message(STATUS "SPOUTDX_LIB=${SPOUTDX_LIB}")
+message(STATUS "SPOUT_LIB=${SPOUT_LIB}")
 
 add_library(SpoutDXWrapper SHARED ${SOURCES} ${HEADERS})
 
 target_link_libraries(SpoutDXWrapper PRIVATE
         ${SPOUTDX_LIB}
+        ${SPOUT_LIB}
         ${D3D11_LIB}
         ${DXGI_LIB}
 )
@@ -52,6 +51,12 @@ target_link_libraries(SpoutDXWrapper PRIVATE
 set_target_properties(SpoutDXWrapper PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/bin/Debug
         RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/bin/Release
+)
+
+add_custom_command(TARGET SpoutDXWrapper POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/SpoutDX.dll"
+        $<TARGET_FILE_DIR:SpoutDXWrapper>
 )
 
 if(MSVC)
