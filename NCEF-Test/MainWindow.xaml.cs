@@ -1,4 +1,5 @@
-﻿using System.Windows;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -17,6 +18,11 @@ public partial class MainWindow : Window
     private DispatcherTimer _monitorTimer;
     private int _browserWidth = 1280;
     private int _browserHeight = 720;
+    private bool _isMouseMovePending;
+    private int _pendingMouseX;
+    private int _pendingMouseY;
+    private readonly object _mouseMoveLock = new object();
+    private BrowserMemoryMapWindow? _browserMemoryMapWindow;
 
     public MainWindow()
     {
@@ -28,12 +34,14 @@ public partial class MainWindow : Window
         _renderTimer.Tick += RenderTimer_Tick;
         _monitorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
         _monitorTimer.Tick += MonitorTimer_Tick;
+        _mouseMoveTimer.Tick += MouseMoveTimer_Tick;
 
         SpoutPreviewBorder.MouseLeftButtonDown += SpoutPreviewBorder_MouseLeftButtonDown;
         SpoutPreviewBorder.MouseMove += SpoutPreviewBorder_MouseMove;
         SpoutPreviewBorder.MouseLeftButtonUp += SpoutPreviewBorder_MouseLeftButtonUp;
         SpoutPreviewBorder.MouseWheel += SpoutPreviewBorder_MouseWheel;
         SpoutPreviewBorder.KeyDown += SpoutPreviewBorder_KeyDown;
+        SpoutPreviewBorder.KeyUp += SpoutPreviewBorder_KeyUp;
         SpoutPreviewBorder.TextInput += SpoutPreviewBorder_TextInput;
     }
 
@@ -68,8 +76,8 @@ public partial class MainWindow : Window
         {
             _spoutReceiver._receiver.SelectSender();
             var spoutId = _spoutReceiver._receiver.GetSenderName();
-            await ConnectToBrowser(spoutId);
             await ConnectSpout(spoutId);
+            await ConnectToBrowser(spoutId);
         }
         catch (Exception exception)
         {
@@ -127,6 +135,13 @@ public partial class MainWindow : Window
                 _browserClient = new BrowserRpcClient();
                 _browserClient.Connect(spoutId);
                 Log($"Connected to Browser RPC: {spoutId}");
+
+                Dispatcher.Invoke(() =>
+                {
+                    _browserMemoryMapWindow = new BrowserMemoryMapWindow();
+                    _browserMemoryMapWindow.SetBrowserClient(_browserClient);
+                    _browserMemoryMapWindow.Show();
+                });
             }
             catch (Exception ex)
             {
@@ -168,16 +183,19 @@ public partial class MainWindow : Window
         {
             TxtFrameSize.Text = $"{_spoutReceiver.Width} x {_spoutReceiver.Height}";
             TxtFps.Text = _spoutReceiver.Fps.ToString("F1");
-            TxtSpoutInfo.Text = $"{_currentSpoutId}\n{_spoutReceiver.Width}x{_spoutReceiver.Height}@{_spoutReceiver.Fps:F1}fps";
+            TxtSpoutInfo.Text =
+                $"{_currentSpoutId}\n{_spoutReceiver.Width}x{_spoutReceiver.Height}@{_spoutReceiver.Fps:F1}fps";
 
             byte[] frameData = _spoutReceiver.CaptureFrame();
             if (frameData != null)
             {
                 try
                 {
-                    var bitmap = new WriteableBitmap(_spoutReceiver.Width, _spoutReceiver.Height, 96, 96, PixelFormats.Bgra32, null);
+                    var bitmap = new WriteableBitmap(_spoutReceiver.Width, _spoutReceiver.Height, 96, 96,
+                        PixelFormats.Bgra32, null);
                     bitmap.Lock();
-                    bitmap.WritePixels(new Int32Rect(0, 0, _spoutReceiver.Width, _spoutReceiver.Height), frameData, _spoutReceiver.Width * 4, 0);
+                    bitmap.WritePixels(new Int32Rect(0, 0, _spoutReceiver.Width, _spoutReceiver.Height), frameData,
+                        _spoutReceiver.Width * 4, 0);
                     bitmap.Unlock();
                     SpoutPreviewImage.Source = bitmap;
                 }
@@ -240,8 +258,45 @@ public partial class MainWindow : Window
         var pt = GetBrowserCoordinates(e);
         if (pt.HasValue)
         {
-            _browserClient.SendMouseMove((int)pt.Value.X, (int)pt.Value.Y);
+            lock (_mouseMoveLock)
+            {
+                _pendingMouseX = (int)pt.Value.X;
+                _pendingMouseY = (int)pt.Value.Y;
+                _isMouseMovePending = true;
+            }
+
+            if (!_mouseMoveTimer.IsEnabled)
+            {
+                _mouseMoveTimer.Start();
+            }
         }
+    }
+
+    private readonly DispatcherTimer _mouseMoveTimer = new DispatcherTimer
+    {
+        Interval = TimeSpan.FromMilliseconds(16)
+    };
+
+    private void MouseMoveTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_browserClient == null) return;
+        
+
+        int x, y;
+        lock (_mouseMoveLock)
+        {
+            if (!_isMouseMovePending)
+            {
+                _mouseMoveTimer.Stop();
+                return;
+            }
+
+            x = _pendingMouseX;
+            y = _pendingMouseY;
+            _isMouseMovePending = false;
+        }
+
+        _browserClient.SendMouseMove(x, y);
     }
 
     private void SpoutPreviewBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -257,6 +312,7 @@ public partial class MainWindow : Window
 
     private void SendMouseClick(MouseButtonEventArgs e, bool mouseUp)
     {
+        if (_browserClient == null) return;
         var pt = GetBrowserCoordinates(e);
         if (pt.HasValue)
         {
@@ -266,15 +322,20 @@ public partial class MainWindow : Window
 
     private void SpoutPreviewBorder_MouseWheel(object sender, MouseWheelEventArgs e)
     {
+        if (_browserClient == null) return;
         var pt = GetBrowserCoordinates(e);
         if (pt.HasValue)
         {
-            _browserClient.SendMouseWheel((int)pt.Value.X, (int)pt.Value.Y, 0, e.Delta);
+            int x = (int)pt.Value.X;
+            int y = (int)pt.Value.Y;
+            int delta = e.Delta;
+            _browserClient.SendMouseWheel(x, y, 0, delta);
         }
     }
 
     private void SpoutPreviewBorder_KeyDown(object sender, KeyEventArgs e)
     {
+        if (_browserClient == null) return;
         int keyCode = InputHelper.GetVirtualKeyCode(e.Key);
         if (keyCode != 0)
         {
@@ -283,58 +344,55 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SpoutPreviewBorder_KeyUp(object sender, KeyEventArgs e)
+    {
+        if (_browserClient == null) return;
+        int keyCode = InputHelper.GetVirtualKeyCode(e.Key);
+        if (keyCode != 0)
+        {
+            int modifiers = InputHelper.GetCurrentModifiers();
+            _browserClient.SendKeyEvent(keyCode, true, modifiers);
+        }
+    }
+
     private void SpoutPreviewBorder_TextInput(object sender, TextCompositionEventArgs e)
     {
-        if (string.IsNullOrEmpty(e.Text)) return;
-        _browserClient.SendText(e.Text);
+        // Chromium internal input pipeline handles character translation automatically from WM_KEYDOWN.
+        // Calling SendText here causes double character input (e.g. 'ww').
+        e.Handled = true;
     }
 
     private void BtnShowDevTools_Click(object sender, RoutedEventArgs e)
     {
+        if (_browserClient == null) return;
         _browserClient.ShowDevTools();
         Log("ShowDevTools");
     }
 
     private async void BtnGetUrl_Click(object sender, RoutedEventArgs e)
     {
-        await Task.Run(() =>
-        {
-            try
-            {
-                string url = _browserClient.GetUrl();
-                Log($"URL: {url}");
-            }
-            catch (Exception ex)
-            {
-                Log($"GetUrl failed: {ex.Message}");
-            }
-        });
+        if (_browserClient == null) return;
+        string url = _browserClient.GetUrl();
+        Log($"URL: {url}");
     }
 
     private void BtnExecuteJs_Click(object sender, RoutedEventArgs e)
     {
+        if (_browserClient == null) return;
         _browserClient.ExecuteJs("alert('Hello from NCEF Test!');");
         Log("Executed JS: alert('Hello from NCEF Test!')");
     }
 
     private async void BtnGetCursorType_Click(object sender, RoutedEventArgs e)
     {
-        await Task.Run(() =>
-        {
-            try
-            {
-                int cursorType = _browserClient.GetCursorType();
-                Log($"CursorType: {cursorType}");
-            }
-            catch (Exception ex)
-            {
-                Log($"GetCursorType failed: {ex.Message}");
-            }
-        });
+        if (_browserClient == null) return;
+        int cursorType = _browserClient.GetCursorType();
+        Log($"CursorType: {cursorType}");
     }
 
     private async void BtnRunTests_Click(object sender, RoutedEventArgs e)
     {
+        if (_browserClient == null) return;
         BtnRunTests.IsEnabled = false;
         Log("\n========== Running Tests ==========");
 

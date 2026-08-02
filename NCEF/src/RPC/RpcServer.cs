@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO.MemoryMappedFiles;
 using System.Reflection;
@@ -61,7 +61,7 @@ namespace NCEF.RPC
             Task.Run(ListenForRpcLoop, _cts.Token);
             Task.Run(ProcessEventQueueLoop, _cts.Token);
 
-            Console.WriteLine($"{LOG_TAG}Started for ID: {rpcId}");
+            Program.Logger.Info($"{LOG_TAG}Started for ID: {rpcId}");
         }
 
         public void SendEvent(string method, params object[] args)
@@ -92,7 +92,7 @@ namespace NCEF.RPC
 
                     if (!_evtDataAck.WaitOne(EVENT_ACK_TIMEOUT_MS))
                     {
-                        Console.WriteLine($"{LOG_TAG}Warning: Java client timed out accepting event.");
+                        Program.Logger.Info($"{LOG_TAG}Warning: Java client timed out accepting event.");
                     }
                 }
             }
@@ -102,8 +102,8 @@ namespace NCEF.RPC
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{LOG_TAG}Event Loop Fatal Error!");
-                Console.WriteLine(ex);
+                Program.Logger.Info($"{LOG_TAG}Event Loop Fatal Error!");
+                Program.Logger.Info(ex);
             }
         }
 
@@ -164,7 +164,8 @@ namespace NCEF.RPC
                     catch (Exception ex)
                     {
                         _resEvt.Set();
-                        Console.WriteLine($"{LOG_TAG}Invoke Error: {ex.Message}");
+                        var actualEx = ex is TargetInvocationException tie && tie.InnerException != null ? tie.InnerException : ex;
+                        Program.Logger.Error($"{LOG_TAG}Invoke Error: {actualEx.Message}", actualEx);
                     }
                 }
             }

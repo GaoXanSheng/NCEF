@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NCEF.Browser;
@@ -30,7 +30,28 @@ namespace NCEF.Controller
                 return spoutName;
             var session = new BrowserSession(url, spoutName, fps);
             _sessions.Add(spoutName, session);
-            session.StartAsync(w,h).Wait();
+
+            if (Program.MainSyncContext != null)
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                Program.MainSyncContext.Post(async _ =>
+                {
+                    try
+                    {
+                        await session.StartAsync(w, h);
+                        tcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetException(ex);
+                    }
+                }, null);
+                tcs.Task.Wait();
+            }
+            else
+            {
+                session.StartAsync(w, h).Wait();
+            }
             return spoutName;
         }
 
@@ -40,7 +61,7 @@ namespace NCEF.Controller
             {
                 session.Dispose();
                 _sessions.Remove(spoutName);
-                Console.WriteLine($"RPC Dispose: {spoutName}");
+                Program.Logger.Info($"RPC Dispose: {spoutName}");
             }
         }
 

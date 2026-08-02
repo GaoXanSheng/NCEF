@@ -129,6 +129,7 @@ namespace SpoutDXWrapper {
             if (!tex) {
                 return IntPtr::Zero;
             }
+            tex->AddRef(); 
             return IntPtr((void*)tex);
         }
         unsigned int GetWidth() { return receiver->GetSenderWidth(); }

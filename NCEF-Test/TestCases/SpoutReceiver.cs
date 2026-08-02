@@ -1,6 +1,7 @@
 using System;
 using SharpDX;
 using SharpDX.Direct3D11;
+using SharpDX.DXGI;
 using MapFlags = SharpDX.Direct3D11.MapFlags;
 using Device = SharpDX.Direct3D11.Device;
 using Device1 = SharpDX.Direct3D11.Device1;
@@ -41,9 +42,8 @@ namespace NCEF_Test.TestCases
             device0.Dispose();
 
             _receiver = new SpoutDXWrapper.SpoutReceiver();
-            _receiver.SetReceiverName(senderName);
             _receiver.OpenDirectX(_dxDevice.NativePointer);
-
+            _receiver.SetReceiverName(senderName);
             Width = 0;
             Height = 0;
             HasNewFrame = false;
@@ -93,12 +93,19 @@ namespace NCEF_Test.TestCases
             try
             {
                 var sharedTexture = new Texture2D(SharedTexturePtr);
-                var desc = sharedTexture.Description;
-                desc.BindFlags = BindFlags.None;
-                desc.OptionFlags = ResourceOptionFlags.None;
-                desc.Usage = ResourceUsage.Staging;
-                desc.CpuAccessFlags = CpuAccessFlags.Read;
-
+                var desc = new Texture2DDescription
+                {
+                    Width = Width,
+                    Height = Height,
+                    MipLevels = 1,
+                    ArraySize = 1,
+                    Format = Format.B8G8R8A8_UNorm,
+                    SampleDescription = new SampleDescription(1, 0),
+                    Usage = ResourceUsage.Staging,
+                    BindFlags = BindFlags.None,
+                    CpuAccessFlags = CpuAccessFlags.Read,
+                    OptionFlags = ResourceOptionFlags.None
+                };
                 using var stagingTexture = new Texture2D(_dxDevice, desc);
                 _dxDevice.ImmediateContext.CopyResource(sharedTexture, stagingTexture);
                 var dataBox = _dxDevice.ImmediateContext.MapSubresource(stagingTexture, 0, MapMode.Read, MapFlags.None);

@@ -41,28 +41,28 @@ namespace NCEF.Utils
 
                 if (status != 0)
                 {
-                    Console.WriteLine($"NtQueryInformationProcess failed with status: {status}");
+                    Program.Logger.Info($"NtQueryInformationProcess failed with status: {status}");
                     return null;
                 }
 
                 int parentPid = pbi.InheritedFromUniqueProcessId.ToInt32();
-                Console.WriteLine($"Detected parent process PID: {parentPid}");
+                Program.Logger.Info($"Detected parent process PID: {parentPid}");
 
                 try
                 {
                     Process parentProcess = Process.GetProcessById(parentPid);
-                    Console.WriteLine($"Parent process found: {parentProcess.ProcessName}");
+                    Program.Logger.Info($"Parent process found: {parentProcess.ProcessName}");
                     return parentProcess;
                 }
                 catch (ArgumentException ex)
                 {
-                    Console.WriteLine($"Parent process {parentPid} not found: {ex.Message}");
+                    Program.Logger.Info($"Parent process {parentPid} not found: {ex.Message}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting parent process: {ex.Message}");
+                Program.Logger.Info($"Error getting parent process: {ex.Message}");
                 return null;
             }
         }
@@ -72,7 +72,7 @@ namespace NCEF.Utils
             return Task.Run(async () =>
             {
                 int parentPid = parent.Id;
-                Console.WriteLine($"Starting parent process monitor for PID: {parentPid}");
+                Program.Logger.Info($"Starting parent process monitor for PID: {parentPid}");
 
                 try
                 {
@@ -84,13 +84,13 @@ namespace NCEF.Utils
                             parent.Refresh();
                             if (parent.HasExited)
                             {
-                                Console.WriteLine("Parent process has exited (detected via Refresh/HasExited).");
+                                Program.Logger.Info("Parent process has exited (detected via Refresh/HasExited).");
                                 break;
                             }
                         }
                         catch (Exception)
                         {
-                            Console.WriteLine("Parent process is no longer accessible (Refresh failed).");
+                            Program.Logger.Info("Parent process is no longer accessible (Refresh failed).");
                             break;
                         }
 
@@ -99,31 +99,31 @@ namespace NCEF.Utils
                             Process checkProcess = Process.GetProcessById(parentPid);
                             if (checkProcess.ProcessName != parent.ProcessName)
                             {
-                                Console.WriteLine(
+                                Program.Logger.Info(
                                     $"Parent process PID {parentPid} has been reused by different process.");
                                 break;
                             }
                         }
                         catch (ArgumentException)
                         {
-                            Console.WriteLine($"Parent process with PID {parentPid} no longer exists.");
+                            Program.Logger.Info($"Parent process with PID {parentPid} no longer exists.");
                             break;
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in parent process monitoring: {ex.Message}");
+                    Program.Logger.Info($"Error in parent process monitoring: {ex.Message}");
                 }
 
-                Console.WriteLine("Parent process exited. Closing NCEF...");
+                Program.Logger.Info("Parent process exited. Closing NCEF...");
                 try
                 {
                     appCore?.OnClosed();
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error during cleanup: {ex.Message}");
+                    Program.Logger.Info($"Error during cleanup: {ex.Message}");
                 }
 
                 Environment.Exit(0);

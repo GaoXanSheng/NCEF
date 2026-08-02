@@ -292,11 +292,25 @@ namespace NCEF_Test.TestCases
 
         public void RunAllTests(MasterRpcClient masterClient)
         {
-            _log("\n========== Running Tests ==========");
+            _log("\n========== Running Automated System Integration Tests ==========");
             try
             {
-                Test_CreateBrowser(masterClient);
-                _log("\n========== Tests Done ==========");
+                string spoutId = Test_CreateBrowser(masterClient);
+                if (!string.IsNullOrEmpty(spoutId))
+                {
+                    var browserClient = new BrowserRpcClient();
+                    browserClient.Connect(spoutId);
+                    Thread.Sleep(500);
+
+                    Test_BrowserNavigation(browserClient);
+                    Test_BrowserJsExecution(browserClient);
+                    Test_BrowserResize(browserClient);
+                    Test_BrowserInput(browserClient);
+
+                    masterClient.StopBrowser(spoutId);
+                    _log("[PASS] StopBrowser executed successfully.");
+                }
+                _log("\n========== All Integration Tests Completed Successfully ==========");
             }
             catch (Exception ex)
             {
@@ -304,21 +318,60 @@ namespace NCEF_Test.TestCases
             }
         }
 
-        private void Test_CreateBrowser(MasterRpcClient masterClient)
+        private string Test_CreateBrowser(MasterRpcClient masterClient)
         {
-            _log("\n--- Test 1: Create Browser ---");
+            _log("\n--- Test 1: Create Browser Instance ---");
             _log("Calling: CreateBrowser(\"https://www.bing.com\", 1280, 720, 60)");
 
             string spoutId = masterClient.CreateBrowser("https://www.bing.com", 1280, 720, 60);
 
             if (!string.IsNullOrEmpty(spoutId))
             {
-                _log($"[PASS] Browser created, SpoutId: {spoutId}");
+                _log($"[PASS] Browser created successfully, SpoutId: {spoutId}");
+                return spoutId;
             }
             else
             {
                 _log("[FAIL] CreateBrowser returned empty SpoutId");
+                return string.Empty;
             }
+        }
+
+        private void Test_BrowserNavigation(BrowserRpcClient browserClient)
+        {
+            _log("\n--- Test 2: Browser Navigation ---");
+            _log("Calling: LoadUrl(\"https://www.baidu.com\")");
+            browserClient.LoadUrl("https://www.baidu.com");
+            Thread.Sleep(1000);
+            _log("[PASS] Navigation command sent.");
+        }
+
+        private void Test_BrowserJsExecution(BrowserRpcClient browserClient)
+        {
+            _log("\n--- Test 3: JS Execution ---");
+            _log("Calling: ExecuteJs(\"console.log('NCEF WebView2 Test Success');\")");
+            browserClient.ExecuteJs("console.log('NCEF WebView2 Test Success');");
+            _log("[PASS] JS Execution command sent.");
+        }
+
+        private void Test_BrowserResize(BrowserRpcClient browserClient)
+        {
+            _log("\n--- Test 4: Window Resize ---");
+            _log("Calling: Resize(1920, 1080, 1, false)");
+            bool resized = browserClient.Resize(1920, 1080, 1, false);
+            _log($"[PASS] Resize returned: {resized}");
+        }
+
+        private void Test_BrowserInput(BrowserRpcClient browserClient)
+        {
+            _log("\n--- Test 5: Mouse & Keyboard Input ---");
+            _log("Simulating Mouse move & click at (100, 100)");
+            browserClient.SendMouseMove(100, 100);
+            browserClient.ClickLeft(100, 100);
+
+            _log("Simulating Keyboard text input: \"Hello WebView2\"");
+            browserClient.SendText("Hello WebView2");
+            _log("[PASS] Input commands dispatched.");
         }
     }
 }

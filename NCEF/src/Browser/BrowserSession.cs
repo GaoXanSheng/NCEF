@@ -1,17 +1,14 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
-using CefSharp.Structs;
 using NCEF.Controller;
 using NCEF.Handler;
 using NCEF.RPC;
-using Size = System.Drawing.Size;
 
 namespace NCEF.Browser
 {
     public class BrowserSession : IDisposable
     {
         public BrowserInstance Browser { get; private set; }
-        public RenderHandler RenderHandler { get; private set; }
         public string SpoutId { get; private set; }
         public AudioHandler AudioHandler { get; private set; }
         private RpcServer<IBrowserController> _rpc;
@@ -21,7 +18,6 @@ namespace NCEF.Browser
         {
             SpoutId = spoutId;
             Browser = new BrowserInstance(url, maxFps, spoutId, Dispose);
-            RenderHandler = new RenderHandler(spoutId);
             AudioHandler = new AudioHandler();
             _controller = new BrowserControllerImpl(this);
             _rpc = new RpcServer<IBrowserController>(spoutId, _controller);
@@ -31,17 +27,13 @@ namespace NCEF.Browser
         public async Task StartAsync(int w, int h)
         {
             await Browser.InitializeAsync(_controller);
-            Browser.chromiumWebBrowser.Size = new Size(w, h);
-            Browser.chromiumWebBrowser.AudioHandler = AudioHandler;
-            RenderHandler.SetViewRect(new Rect(0, 0, w, h));
-            Browser.chromiumWebBrowser.RenderHandler = RenderHandler;
+            Browser.WebBrowser.Resize(w, h);
         }
 
         public void Dispose()
         {
             _rpc?.Dispose();
-            Browser?.chromiumWebBrowser?.Dispose();
-            RenderHandler?.Dispose();
+            Browser?.WebBrowser?.Dispose();
         }
     }
 }

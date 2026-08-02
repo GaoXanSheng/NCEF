@@ -11,10 +11,10 @@ namespace NCEF.Utils
         {
             if (!Directory.Exists(Config.UserDataPath))
             {
-                Console.WriteLine("User Data folder does not exist, no cleanup needed.");
+                Program.Logger.Info("User Data folder does not exist, no cleanup needed.");
                 return;
             }
-            Console.WriteLine("Checking for processes locking User Data folder...");
+            Program.Logger.Info("Checking for processes locking User Data folder...");
             var currentProcess = Process.GetCurrentProcess();
             var lockingProcesses = Process.GetProcessesByName("NCEF")
                 .Where(p => p.Id != currentProcess.Id)
@@ -22,20 +22,20 @@ namespace NCEF.Utils
 
             if (lockingProcesses.Any())
             {
-                Console.WriteLine($"Found {lockingProcesses.Count} process(es) that may be locking User Data folder:");
+                Program.Logger.Info($"Found {lockingProcesses.Count} process(es) that may be locking User Data folder:");
                 foreach (var process in lockingProcesses)
                 {
                     try
                     {
-                        Console.WriteLine($"  - {process.ProcessName} (PID: {process.Id})");
-                        Console.WriteLine($"    Killing process {process.Id}...");
+                        Program.Logger.Info($"  - {process.ProcessName} (PID: {process.Id})");
+                        Program.Logger.Info($"    Killing process {process.Id}...");
                         process.Kill();
                         process.WaitForExit(5000);
-                        Console.WriteLine($"    Process {process.Id} terminated successfully.");
+                        Program.Logger.Info($"    Process {process.Id} terminated successfully.");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"    Failed to kill process {process.Id}: {ex.Message}");
+                        Program.Logger.Info($"    Failed to kill process {process.Id}: {ex.Message}");
                     }
                 }
                 System.Threading.Thread.Sleep(500);
@@ -55,16 +55,16 @@ namespace NCEF.Utils
                     try
                     {
                         File.Delete(lockFile);
-                        Console.WriteLine($"Deleted lock file: {Path.GetFileName(lockFile)}");
+                        Program.Logger.Info($"Deleted lock file: {Path.GetFileName(lockFile)}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Could not delete lock file {Path.GetFileName(lockFile)}: {ex.Message}");
+                        Program.Logger.Info($"Could not delete lock file {Path.GetFileName(lockFile)}: {ex.Message}");
                     }
                 }
             }
 
-            Console.WriteLine("User Data folder cleanup completed.");
+            Program.Logger.Info("User Data folder cleanup completed.");
         }
     }
 }
