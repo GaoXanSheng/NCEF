@@ -1,6 +1,6 @@
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
+using log4net;
 using Microsoft.Web.WebView2.Core;
 using NCEF.Browser;
 using NCEF.Handler;
@@ -9,6 +9,7 @@ namespace NCEF.Controller
 {
     public class BrowserControllerImpl : IBrowserController
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(BrowserControllerImpl));
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern IntPtr PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
@@ -51,12 +52,12 @@ namespace NCEF.Controller
                     }, null);
                     evt.WaitOne();
                 }
-                if (exception != null) Program.Logger.Error("UI Func Failed", exception);
+                if (exception != null) Log.Error("UI Func Failed", exception);
                 return result;
             }
             else
             {
-                try { return func(); } catch { return default; }
+                try { return func(); } catch (Exception ex) { Log.Error("UI Func Failed", ex); return default; }
             }
         }
         private void RunOnUIThread(Action action)
@@ -65,12 +66,12 @@ namespace NCEF.Controller
             {
                 Program.MainSyncContext.Post(_ =>
                 {
-                    try { action(); } catch { }
+                    try { action(); } catch (Exception ex) { Log.Error("UI Action Failed", ex); }
                 }, null);
             }
             else
             {
-                try { action(); } catch { }
+                try { action(); } catch (Exception ex) { Log.Error("UI Action Failed", ex); }
             }
         }
 

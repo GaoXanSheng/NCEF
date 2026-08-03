@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using log4net;
 using NCEF.Browser;
 using NCEF.RPC;
 
@@ -8,6 +9,7 @@ namespace NCEF.Controller
 {
     public class MasterControllerImpl : IMasterController
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(MasterControllerImpl));
         private readonly RpcServer<IMasterController>  _masterRpc;
         private readonly Dictionary<string, BrowserSession> _sessions = new Dictionary<string, BrowserSession>();
 
@@ -59,9 +61,14 @@ namespace NCEF.Controller
         {
             if (_sessions.TryGetValue(spoutName, out var session))
             {
-                session.Dispose();
                 _sessions.Remove(spoutName);
-                Program.Logger.Info($"RPC Dispose: {spoutName}");
+                session.Dispose();
+                Log.Info($"RPC Dispose: {spoutName}");
+
+                // Force Garbage Collection to immediately reclaim WebView2 / COM / DirectX / GDI memory
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
             }
         }
 

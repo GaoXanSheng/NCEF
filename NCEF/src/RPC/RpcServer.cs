@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -12,6 +13,7 @@ namespace NCEF.RPC
 {
     public class RpcServer<T> : IDisposable
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(RpcServer<T>));
         private const string PREFIX_RPC_MAP = "NCEF_RPC_";
         private const string PREFIX_REQ_EVENT = "NCEF_REQ_";
         private const string PREFIX_RES_EVENT = "NCEF_RES_";
@@ -61,7 +63,7 @@ namespace NCEF.RPC
             Task.Run(ListenForRpcLoop, _cts.Token);
             Task.Run(ProcessEventQueueLoop, _cts.Token);
 
-            Program.Logger.Info($"{LOG_TAG}Started for ID: {rpcId}");
+            Log.Info($"{LOG_TAG}Started for ID: {rpcId}");
         }
 
         public void SendEvent(string method, params object[] args)
@@ -92,7 +94,7 @@ namespace NCEF.RPC
 
                     if (!_evtDataAck.WaitOne(EVENT_ACK_TIMEOUT_MS))
                     {
-                        Program.Logger.Info($"{LOG_TAG}Warning: Java client timed out accepting event.");
+                        Log.Info($"{LOG_TAG}Warning: Java client timed out accepting event.");
                     }
                 }
             }
@@ -102,8 +104,8 @@ namespace NCEF.RPC
             }
             catch (Exception ex)
             {
-                Program.Logger.Info($"{LOG_TAG}Event Loop Fatal Error!");
-                Program.Logger.Info(ex);
+                Log.Info($"{LOG_TAG}Event Loop Fatal Error!");
+                Log.Info(ex);
             }
         }
 
@@ -165,7 +167,7 @@ namespace NCEF.RPC
                     {
                         _resEvt.Set();
                         var actualEx = ex is TargetInvocationException tie && tie.InnerException != null ? tie.InnerException : ex;
-                        Program.Logger.Error($"{LOG_TAG}Invoke Error: {actualEx.Message}", actualEx);
+                        Log.Error($"{LOG_TAG}Invoke Error: {actualEx.Message}", actualEx);
                     }
                 }
             }

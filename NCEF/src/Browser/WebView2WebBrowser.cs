@@ -1,11 +1,11 @@
 using System;
 using System.Drawing;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using log4net;
 using Microsoft.Web.WebView2.Core;
 using NCEF.Utils;
-using SharpDX;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -16,11 +16,9 @@ namespace NCEF.Browser
 {
     public class WebView2WebBrowser : IDisposable
     {
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr CreateWindowEx(int dwExStyle, string lpClassName, string lpWindowName, uint dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool DestroyWindow(IntPtr hWnd);
+        private static readonly ILog Log = LogManager.GetLogger(typeof(WebView2WebBrowser));
+        [DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
 
         public CoreWebView2Controller Controller { get; private set; }
         public CoreWebView2 CoreWebView2 => Controller?.CoreWebView2;
@@ -28,9 +26,14 @@ namespace NCEF.Browser
         private Device1 _dxDevice;
         private SpoutDX _spoutSender;
         private Texture2D _compositeTexture;
+        private Surface1 _dxgiSurface1;
         private string _spoutId;
         private Size _currentSize;
-        private IntPtr _hostHwnd = IntPtr.Zero;
+        private Form _hostForm;
+
+        private System.Threading.Timer _frameTimer;
+        private readonly object _textureLock = new object();
+        private bool _isDisposed = false;
 
         public WebView2WebBrowser(string spoutId)
         {
@@ -51,70 +54,47 @@ namespace NCEF.Browser
         }
 
         [DllImport("user32.dll")]
-        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
         [DllImport("user32.dll")]
-        private static extern IntPtr GetWindowDC(IntPtr hWnd);
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
-        [DllImport("user32.dll")]
-        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int nWidth, int nHeight);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteDC(IntPtr hdc);
-
-        [DllImport("gdi32.dll")]
-        private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines, byte[] lpvBits, ref BITMAPINFO lpbi, uint uUsage);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BITMAPINFOHEADER
-        {
-            public uint biSize;
-            public int biWidth;
-            public int biHeight;
-            public ushort biPlanes;
-            public ushort biBitCount;
-            public uint biCompression;
-            public uint biSizeImage;
-            public int biXPelsPerMeter;
-            public int biYPelsPerMeter;
-            public uint biClrUsed;
-            public uint biClrImportant;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BITMAPINFO
-        {
-            public BITMAPINFOHEADER bmiHeader;
-            public uint bmiColors;
-        }
-
-        private System.Threading.Timer _frameTimer;
-        private byte[] _pixelBuffer;
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int WS_EX_NOACTIVATE = 0x08000000;
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WS_EX_LAYERED = 0x00080000;
 
         public async Task InitializeAsync(string initialUrl, string cachePath)
         {
-            // Position offscreen (-32000, -32000) with WS_EX_TOOLWINDOW so no taskbar button appears
-            _hostHwnd = CreateWindowEx(0x00000080 /* WS_EX_TOOLWINDOW */, "STATIC", "NCEF_WV2_HOST", 0x80000000 | 0x10000000 /* WS_POPUP | WS_VISIBLE */, -32000, -32000, _currentSize.Width, _currentSize.Height, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+            // Position hostForm far offscreen at (-20000, -20000) with click-through (WS_EX_TRANSPARENT) and no-activate styles
+            _hostForm = new Form
+            {
+                Text = "NCEF_WV2_HOST",
+                FormBorderStyle = FormBorderStyle.None,
+                StartPosition = FormStartPosition.Manual,
+                Location = new Point(-20000, -20000),
+                Size = new Size(_currentSize.Width, _currentSize.Height),
+                ShowInTaskbar = false,
+                Opacity = 0.01
+            };
+            _hostForm.Show();
+
+            try
+            {
+                int exStyle = GetWindowLong(_hostForm.Handle, GWL_EXSTYLE);
+                SetWindowLong(_hostForm.Handle, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_LAYERED);
+            }
+            catch { }
+
+            EnsureCompositeTexture(_currentSize.Width, _currentSize.Height);
+
             var options = new CoreWebView2EnvironmentOptions();
             var environment = await CoreWebView2Environment.CreateAsync(null, cachePath, options);
 
-            Controller = await environment.CreateCoreWebView2ControllerAsync(_hostHwnd);
+            Controller = await environment.CreateCoreWebView2ControllerAsync(_hostForm.Handle);
             Controller.Bounds = new Rectangle(0, 0, _currentSize.Width, _currentSize.Height);
             Controller.IsVisible = true;
-
-            EnsureCompositeTexture(_currentSize.Width, _currentSize.Height);
 
             // Intercept new window requests (target="_blank", window.open) and force current window navigation
             CoreWebView2.NewWindowRequested += (sender, args) =>
@@ -138,101 +118,61 @@ namespace NCEF.Browser
 
             try
             {
+                Log.Info($"WebView2 navigating to: {targetUrl}");
                 CoreWebView2.Navigate(targetUrl);
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Error($"WebView2 navigation to {targetUrl} failed, falling back to about:blank", ex);
                 CoreWebView2.Navigate("about:blank");
             }
 
             _frameTimer = new System.Threading.Timer(_ => RenderLoop(), null, 100, 16);
         }
 
-        private readonly object _textureLock = new object();
-
         private void RenderLoop()
         {
-            if (Controller == null || _hostHwnd == IntPtr.Zero || _isDisposed) return;
+            if (Controller == null || _hostForm == null || _hostForm.IsDisposed || _isDisposed) return;
 
-            try
-            {
-                IntPtr hdcScreen = GetWindowDC(_hostHwnd);
-                IntPtr hdcMem = CreateCompatibleDC(hdcScreen);
-                IntPtr hBitmap = CreateCompatibleBitmap(hdcScreen, _currentSize.Width, _currentSize.Height);
-                IntPtr hOld = SelectObject(hdcMem, hBitmap);
-
-                PrintWindow(_hostHwnd, hdcMem, 2 /* PW_RENDERFULLCONTENT */);
-
-                int bufferSize = _currentSize.Width * _currentSize.Height * 4;
-                if (_pixelBuffer == null || _pixelBuffer.Length != bufferSize)
-                {
-                    _pixelBuffer = new byte[bufferSize];
-                }
-
-                BITMAPINFO bmi = new BITMAPINFO();
-                bmi.bmiHeader.biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFOHEADER));
-                bmi.bmiHeader.biWidth = _currentSize.Width;
-                bmi.bmiHeader.biHeight = -_currentSize.Height; // Top-down
-                bmi.bmiHeader.biPlanes = 1;
-                bmi.bmiHeader.biBitCount = 32;
-                bmi.bmiHeader.biCompression = 0; // BI_RGB
-
-                GetDIBits(hdcMem, hBitmap, 0, (uint)_currentSize.Height, _pixelBuffer, ref bmi, 0);
-
-                SelectObject(hdcMem, hOld);
-                DeleteObject(hBitmap);
-                DeleteDC(hdcMem);
-                ReleaseDC(_hostHwnd, hdcScreen);
-
-                // Lock DX11 Texture and SpoutSender to prevent AccessViolationException when resizing or disposing
-                lock (_textureLock)
-                {
-                    if (!_isDisposed && _compositeTexture != null && !_compositeTexture.IsDisposed && _spoutSender != null)
-                    {
-                        var ctx = _dxDevice.ImmediateContext;
-                        var gcHandle = GCHandle.Alloc(_pixelBuffer, GCHandleType.Pinned);
-                        try
-                        {
-                            var dataBox = new DataBox(gcHandle.AddrOfPinnedObject(), _currentSize.Width * 4, 0);
-                            ctx.UpdateSubresource(dataBox, _compositeTexture, 0);
-                            _spoutSender.SendTexture(_compositeTexture.NativePointer);
-                        }
-                        finally
-                        {
-                            gcHandle.Free();
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Silently ignore transient capture errors
-            }
-        }
-
-        public void SendTextureFrame()
-        {
             lock (_textureLock)
             {
-                if (!_isDisposed && _compositeTexture != null && !_compositeTexture.IsDisposed)
+                if (!_isDisposed && _compositeTexture != null && !_compositeTexture.IsDisposed && _dxgiSurface1 != null && _spoutSender != null)
                 {
-                    _spoutSender?.SendTexture(_compositeTexture.NativePointer);
+                    try
+                    {
+                        // Direct GDI-to-D3D11 GPU Texture VRAM write (ZERO CPU byte copying, ZERO CPU memory allocation!)
+                        IntPtr hdc = _dxgiSurface1.GetDC(true);
+                        if (hdc != IntPtr.Zero)
+                        {
+                            try
+                            {
+                                PrintWindow(_hostForm.Handle, hdc, 2 /* PW_RENDERFULLCONTENT */);
+                            }
+                            finally
+                            {
+                                _dxgiSurface1.ReleaseDC();
+                            }
+
+                            _spoutSender.SendTexture(_compositeTexture.NativePointer);
+                        }
+                    }
+                    catch { }
                 }
             }
         }
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        
 
         public void Resize(int width, int height)
         {
             if (width <= 0 || height <= 0 || _isDisposed) return;
             _currentSize = new Size(width, height);
-            _pixelBuffer = new byte[width * height * 4];
 
-            if (_hostHwnd != IntPtr.Zero)
+            if (_hostForm != null && !_hostForm.IsDisposed)
             {
-                SetWindowPos(_hostHwnd, IntPtr.Zero, 0, 0, width, height, 0x0002 | 0x0004 | 0x0010);
+                _hostForm.Invoke(new Action(() =>
+                {
+                    _hostForm.Size = new Size(width, height);
+                }));
             }
 
             if (Controller != null)
@@ -253,7 +193,9 @@ namespace NCEF.Browser
                     return;
                 }
 
+                _dxgiSurface1?.Dispose();
                 _compositeTexture?.Dispose();
+
                 _compositeTexture = new Texture2D(_dxDevice, new Texture2DDescription
                 {
                     Width = width,
@@ -263,14 +205,14 @@ namespace NCEF.Browser
                     Format = Format.B8G8R8A8_UNorm,
                     SampleDescription = new SampleDescription(1, 0),
                     Usage = ResourceUsage.Default,
-                    BindFlags = BindFlags.ShaderResource,
+                    BindFlags = BindFlags.ShaderResource | BindFlags.RenderTarget,
                     CpuAccessFlags = CpuAccessFlags.None,
-                    OptionFlags = ResourceOptionFlags.Shared
+                    OptionFlags = ResourceOptionFlags.Shared | ResourceOptionFlags.GdiCompatible
                 });
+
+                _dxgiSurface1 = _compositeTexture.QueryInterface<Surface1>();
             }
         }
-
-        private bool _isDisposed = false;
 
         public void Dispose()
         {
@@ -287,14 +229,23 @@ namespace NCEF.Browser
                 }
                 catch { }
 
-                if (_hostHwnd != IntPtr.Zero)
+                if (_hostForm != null && !_hostForm.IsDisposed)
                 {
-                    DestroyWindow(_hostHwnd);
-                    _hostHwnd = IntPtr.Zero;
+                    try
+                    {
+                        _hostForm.Invoke(new Action(() =>
+                        {
+                            _hostForm.Close();
+                            _hostForm.Dispose();
+                        }));
+                    }
+                    catch { }
+                    _hostForm = null;
                 }
 
                 try
                 {
+                    _dxgiSurface1?.Dispose();
                     _compositeTexture?.Dispose();
                     _spoutSender?.Dispose();
                     _dxDevice?.Dispose();
@@ -302,6 +253,7 @@ namespace NCEF.Browser
                 catch { }
 
                 Controller = null;
+                _dxgiSurface1 = null;
                 _compositeTexture = null;
                 _spoutSender = null;
                 _dxDevice = null;

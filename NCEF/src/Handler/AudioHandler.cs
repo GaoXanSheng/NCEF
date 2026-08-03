@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using log4net;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -7,6 +8,7 @@ namespace NCEF.Handler
 {
     public class AudioHandler : IDisposable
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(AudioHandler));
         private BufferedWaveProvider _waveProvider;
         private WasapiOut _waveOut; 
         private volatile float _volume = 1.0f;
@@ -33,7 +35,7 @@ namespace NCEF.Handler
             }
             catch (Exception ex)
             {
-                Program.Logger.Error("CleanupAudio Failed: " + ex.Message);
+                Log.Error("CleanupAudio Failed: " + ex.Message, ex);
             }
         }
 

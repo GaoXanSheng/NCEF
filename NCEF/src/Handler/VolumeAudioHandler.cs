@@ -1,16 +1,20 @@
-﻿using System;
+using System;
 using CefSharp;
 using CefSharp.Handler;
+using log4net;
 
 namespace NCEF.Handler
 {
-    public class VolumeAudioHandler: AudioHandler
+    public class VolumeAudioHandler : AudioHandler
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(VolumeAudioHandler));
         private static double _volume;
+
         public VolumeAudioHandler(double initialVolume = 1.0)
         {
             _volume = initialVolume;
         }
+
         /// <summary>
         /// 设置音量，范围 0.0 ~ 1.0
         /// </summary>
@@ -19,8 +23,9 @@ namespace NCEF.Handler
             if (value < 0) value = 0;
             if (value > 1) value = 1;
             _volume = value;
-            Console.WriteLine($"TheVolumeIsSetTo: {_volume * 100}%");
+            Log.Info($"TheVolumeIsSetTo: {_volume * 100}%");
         }
+
         protected override void OnAudioStreamPacket(IWebBrowser chromiumWebBrowser, IBrowser browser, IntPtr data, int noOfFrames, long pts)
         {
             float[] buffer = new float[noOfFrames];
@@ -33,6 +38,5 @@ namespace NCEF.Handler
             }
             System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, noOfFrames);
         }
-
     }
 }
